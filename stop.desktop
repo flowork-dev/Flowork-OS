@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Flowork — Stop
+GenericName=Stop the Flowork stack
+Comment=Stop the full Flowork stack (agent + router)
+# Portable: %k = this .desktop file's own path, so it finds stop.sh next to it
+# regardless of where the repo lives. Keep this file in the repo root.
+Exec=bash -c 'p="%k"; p="${p#file://}"; cd "$(dirname "$p")" && exec ./stop.sh --pause'
+Icon=agent/img/cover.png
+Terminal=true
+Categories=Development;Utility;
+Keywords=flowork;ai;agent;router;stop;
+StartupNotify=true

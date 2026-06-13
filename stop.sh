@@ -6,6 +6,12 @@
 # Safe to run when nothing is up — each sub-stopper is a no-op then.
 # ============================================================================
 set -uo pipefail
+
+# --pause keeps the terminal open at the end (used by stop.desktop).
+PAUSE=0
+[ "${1:-}" = "--pause" ] && { PAUSE=1; shift; }
+trap '[ "$PAUSE" = "1" ] && { printf "\n[Enter to close] "; read -r _; }' EXIT
+
 ROOT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 
 c_ok()   { printf '\e[32m%s\e[0m\n' "$*"; }
