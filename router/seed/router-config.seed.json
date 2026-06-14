@@ -38,6 +38,9 @@
         "baseUrl": "http://127.0.0.1:11434/v1",
         "format": "openai",
         "models": [
+          "flowork-brain",
+          "flowork-brain:latest",
+          "qwen2.5:14b",
           "qwen-flowork",
           "qwen-flowork:latest",
           "qwen-abliterate"
