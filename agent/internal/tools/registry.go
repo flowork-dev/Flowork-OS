@@ -62,8 +62,18 @@ func Register(t Tool) {
 func Lookup(name string) (Tool, bool) {
 	regMu.RLock()
 	defer regMu.RUnlock()
-	t, ok := registry[name]
-	return t, ok
+	if t, ok := registry[name]; ok {
+		return t, ok
+	}
+	// Alias layer (Phase 2 "alias chain", see header): surface vocabulary names
+	// (Read/Write/Bash/...) resolve to their canonical twin. Pure map lookup in
+	// alias.go — no recursion, safe under the read lock. mcp__* and unknown names
+	// pass through unchanged and simply miss.
+	if canon := canonicalToolName(name); canon != name {
+		t, ok := registry[canon]
+		return t, ok
+	}
+	return nil, false
 }
 
 // List — return semua registered tools sorted by name. Buat discovery endpoint.

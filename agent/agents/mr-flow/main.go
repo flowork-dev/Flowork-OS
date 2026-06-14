@@ -1154,14 +1154,19 @@ func classifyRoute(cfg agentConfig, userText string) (category, subject string, 
 		descParts = append(descParts, "'"+c.id+"'="+d)
 	}
 	if len(enum) == 0 {
-		enum = []string{"saham", "crypto", "music-ops", "promo-ops", "operasi-komputer"}
+		// FALLBACK enum (pas fetchCategories kosong) = cuma crew analisa-domain.
+		// 'operasi-komputer' SENGAJA DIBUANG dari sini: kendali komputer/shell
+		// sekarang dilayani TOOL-LOOP langsung (system_power buat power, PowerShell/
+		// Bash/Monitor buat shell) — bukan crew phantom yang ga ke-konfigurasi
+		// (dulu selalu error "kategori ga ada" + nge-hijack intent shell). Biarin
+		// classifier balik false buat intent komputer → jatuh ke tool-loop.
+		enum = []string{"saham", "crypto", "music-ops", "promo-ops"}
 		for _, k := range enum {
 			validCat[k] = true
 		}
 		descParts = []string{
 			"'saham'=analisa SAHAM/STOCK pasar manapun (BBCA,Tesla,AAPL)",
 			"'crypto'=analisa COIN/TOKEN kripto (Bitcoin,Ethereum,coin apapun)",
-			"'operasi-komputer'=kendaliin komputer (matiin/restart/tidur/kunci/logout)",
 			"'music-ops'=task produksi/upload musik YouTube",
 			"'promo-ops'=task materi promosi Flowork",
 		}

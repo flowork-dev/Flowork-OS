@@ -23,6 +23,8 @@ var readOnlyTools = map[string]bool{
 	"market_quote": true, "scanner_findings_query": true, "scanner_runs_query": true,
 	"skill_search": true, "decision_search": true, "mistake_search": true, "audit_search": true,
 	"stat_summary": true, "interaction_recall": true, "edu_error_lookup": true, "karma_query": true,
+	// surface-vocabulary read-only tools (claude_tools.go)
+	"TaskOutput": true, "StructuredOutput": true,
 }
 
 func init() {

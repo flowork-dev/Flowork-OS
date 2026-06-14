@@ -43,6 +43,15 @@ var coreExposedTools = []string{
 // so raising the ceiling never bloats them.
 const maxExposedTools = 50
 
+// primaryExtraTools — surface-vocabulary tools exposed ONLY to the primary
+// orchestrator (mr-flow), not to ants. These cover shell/task-lifecycle/schedule/
+// structured-output/orchestration that a coordinator needs. Kept off the ants'
+// core set so ant prompts stay tiny (the over-prompt guard that drove the refactor).
+var primaryExtraTools = []string{
+	"PowerShell", "TaskCreate", "TaskUpdate", "TaskStop", "TaskOutput",
+	"ScheduleWakeup", "Monitor", "SendUserFile", "StructuredOutput", "Workflow",
+}
+
 // ToolSpecsHandler — GET /api/agents/tools/specs?id=<agent>
 // Return {tools: [<openai function schema>...], count}. Loopback-only (dipanggil
 // WASM agent sendiri).
@@ -76,6 +85,12 @@ func ToolSpecsHandler(w http.ResponseWriter, r *http.Request) {
 	// 1. core set (selalu).
 	for _, n := range coreExposedTools {
 		add(n)
+	}
+	// 1b. primary-only surface tools (coordinator vocabulary). Ants skip these.
+	if isPrimary {
+		for _, n := range primaryExtraTools {
+			add(n)
+		}
 	}
 	// 2. tool yang di-subscribe MANUAL (owner pilih di popup) — di luar default seed.
 	if store, err := openAgentStore(id); err == nil {
@@ -115,7 +130,7 @@ func toOpenAIToolSchema(t tools.Tool) map[string]any {
 	return map[string]any{
 		"type": "function",
 		"function": map[string]any{
-			"name":        t.Name(),
+			"name":        tools.DisplayName(t.Name()),
 			"description": sc.Description,
 			"parameters": map[string]any{
 				"type":       "object",
