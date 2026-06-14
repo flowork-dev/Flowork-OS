@@ -5,7 +5,6 @@ go 1.25.0
 use (
 	./agent
 	./router
-	./os/builder
 	./os/flasher
 	./os/mesh-rendezvous
 )
