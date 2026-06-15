@@ -320,4 +320,49 @@ One message, one loop — **Router + Agent + Brain + Mesh working as a single or
 
 ---
 
+## 9. SELF-EVOLUTION & AUTONOMY (R6–R9, 2026-06 — "an organism that lives & evolves")
+
+The endgame: Flowork is a self-evolving organism. These layers (built on the spine above) make it
+understand itself, improve itself, and stay alive — gated so it never breaks itself.
+
+- **Orchestrator note (R3):** the single orchestrator is **`mr-flow-next`** (Telegram via
+  `telegram-channel` → mr-flow-next; HTTP/CLI `/api/chat` → mr-flow-next). Legacy `mr-flow` is
+  retired AS orchestrator but still alive as a primary worker (hosts scanner/diagnostics/codescan).
+
+- **R6 Self-map (Codemap + meaning):** deterministic structure (`/api/codemap/reindex` → file
+  nodes + import edges) + a SEMANTIC layer (`/api/codemap/enrich` → LLM summary/domain/role per
+  file, stored in `codemap_semantic`). The organism reads its own map before changing itself.
+  ⚠️ "Zombie Files" = a WEAK heuristic (Go imports are package-level) — advisory only, NEVER auto-delete.
+
+- **Self-awareness feed:** the `InvokeAgentMessage` choke-point records interaction + decision +
+  karma (+ mistakes on real failure, workspace catalog) for EVERY agent → fuels the karma gate +
+  makes the Diagnostics menus meaningful across all agents.
+
+- **R7 Self-evolution (the autonomy loop):** reflect (`/api/evolve/reflect` → read self-map → LLM
+  proposes additive improvements → backlog `evolve_proposal` + karma). Execution (phase-2b) =
+  sandbox (git worktree) → test-gate (build+vet+test + guard: no LOCKED, no delete) → commit/STAGE/
+  auto-rollback. **Multi-layer gate** (`EvolveAutoCommitAllowed`): GUI switch (OFF/STAGE/AUTO,
+  default OFF) AND karma mature (≥20 success, ≥90% ratio) AND model passes the capability FLOOR
+  (compile+run eval — guards against weak/local LLM) AND test-gate passes. Token runs out → local
+  LLM → auto-commit auto-blocked. Capability bar is by RESULTS (karma + test-gate), not model name.
+
+- **2 EDITIONS (`FLOWORK_EDITION`, default `public`):** resolves auto-update vs self-evolution.
+  - **DEV** (owner): full evolution (core Go/JS + behavior). Owner curates → pushes upstream.
+  - **PUBLIC** (default, safe): self-evolution only on the BEHAVIOR layer (agents/skills/apps in
+    `~/.flowork`, outside git → no auto-update collision); core auto-updates from the canonical repo.
+  Same engine for everyone (auto-update); each instance grows its own colony (behavior).
+
+- **R9 Self-heal:** `os/selfheal/watchdog.sh` (systemd `flowork-docktor`, Restart=always) watches
+  router :2402 + agent :1987, restarts on crash (anti-flap). Layer: systemd → watchdog → stack.
+  + provider failover (R5) + Guardian (kernel integrity → SAFE-MODE on tamper).
+
+- **Local LLM = opt-in (#10):** NOT auto-started at boot (heavy; most users use cloud/API). Start
+  via the router GUI (Models tab) or `FLOWORK_LOCALAI_AUTOSTART=1`. Provider seed is cloud-first.
+
+> Reference: the AGI→ASI map (DeepMind) names three recursive-self-improvement modes — genotypic
+> (code), memetic (data/skills), sociogenic (specialization/colony). Flowork implements all three:
+> dev-edition core-evolution, public-edition behavior-evolution, and the ant-colony Groups.
+
+---
+
 *Source: the user/operator tutorial §1–§38 (release audit 2026-06).*

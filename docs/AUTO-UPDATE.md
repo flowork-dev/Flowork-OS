@@ -36,3 +36,20 @@ already-running machine **without** clobbering the user's edits or resurrecting 
 
 **Invariant:** an update may ADD schema, ADD content, and SWAP code — it must never DROP a column,
 overwrite a user-edited row, resurrect a user-deleted row, or replace the DATA store.
+
+## 4. Auto-update vs self-evolution — the 2-edition model (2026-06)
+
+Auto-update (pull canonical code) and self-evolution (the organism rewrites its own code) conflict on
+the same git substrate: a local self-commit makes `git pull --ff-only` diverge. Since the repo is
+open-source (every instance would evolve differently), we split into **2 editions** (`FLOWORK_EDITION`,
+default `public`):
+
+- **DEV** (owner instance): full self-evolution — core (Go/JS) + behavior. The owner is the R&D lab;
+  curated improvements are pushed upstream. Auto-update is inert (the dev tree is always ahead).
+- **PUBLIC** (default, safe): self-evolution touches ONLY the **behavior layer** (agents / skills / apps
+  in `~/.flowork` — outside git, never overwritten by `git pull`; seed is if-absent). The **core
+  auto-updates** from the canonical repo. Core-change proposals are logged, never auto-applied → no git
+  divergence → auto-update always fast-forwards.
+
+Result: one shared engine (auto-updated for everyone) + N unique behavior-colonies (each instance grows
+its own). Same DNA, different individuals. See `docs/ARCHITECTURE.md` §9 for the full self-evolution gate.

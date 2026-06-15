@@ -223,6 +223,15 @@ Every agent thinks with **two brains at once**: its **own** (in its folder, offl
 | **Reaper** | **Apoptosis.** Flags broken/failing agents by real task stats so dead weight gets pruned. |
 | **Death Letter** | A retired agent seals a **handover letter** — knowledge continuity across generations. The colony outlives any one member. |
 
+#### 🌱 Self-Evolution — gated, owner-controlled (2026-06)
+Flowork can **reflect on its own code-map and propose + apply improvements to itself** — but never recklessly:
+- **A GUI switch you own** (Evolution tab: OFF / STAGE / AUTO, default **OFF**). Nothing self-modifies unless you arm it.
+- **Multi-layer gate before any auto-commit:** mature *karma* (proven track-record) **+** a model capability **floor** (compile-and-run eval — a weak/local LLM can't pass, so if your cloud token runs out and it falls back to a small local model, auto-commit blocks itself) **+** a deterministic **test-gate** (build + vet + test in an isolated git-worktree sandbox; no LOCKED files, no deletes) **+** auto-rollback on failure.
+- **Two editions** (`FLOWORK_EDITION`): **DEV** evolves the engine itself (owner R&D → pushed upstream); **PUBLIC** (default) evolves only its **behavior layer** (agents/skills/apps in your data dir) while the engine **auto-updates** from the canonical repo. *Same DNA for everyone, a unique colony per machine.*
+- **Self-heal:** a watchdog restarts the stack on crash; the kernel Guardian drops to safe-mode on tamper.
+
+> Three recursive-self-improvement modes the AGI→ASI literature names — *genotypic* (code), *memetic* (data/skills), *sociogenic* (specialization/colony) — Flowork implements all three.
+
 ---
 
 ## 🧯 Educational Errors — mistakes become lessons *(a flag we're planting — dated 8 Jun 2026)*
