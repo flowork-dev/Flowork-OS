@@ -1172,9 +1172,13 @@ func classifyRoute(cfg agentConfig, userText string) (category, subject string, 
 		}
 	}
 	enum = append(enum, "chat")
-	catDesc := "Pilih satu kategori yang COCOK sama maksud user, atau 'chat'. " +
+	// GROUNDING (2026-06-15): jangan maksa kategori terdekat kalau gak bener-bener cocok
+	// (dulu 'team peramal' → nyangkut 'repo-reviewer'). Default aman = 'chat'. Intent
+	// BIKIN sesuatu (tim/app/jadwal/agent) = urusan AI Studio, BUKAN task kategori → 'chat'.
+	catDesc := "Pilih kategori HANYA kalau maksud user BENER-BENER cocok sama salah satu di bawah. " +
+		"Kalau RAGU / gak ada yang pas / cuma ngobrol / user minta BIKIN-MEMBUAT tim/app/jadwal/agent/group → WAJIB pilih 'chat' (JANGAN maksa kategori yang cuma mirip). " +
 		strings.Join(descParts, " · ") +
-		" · 'chat'=ngobrol/sapaan/terima-kasih/pertanyaan umum yang BUKAN task di atas."
+		" · 'chat'=ngobrol/sapaan/terima-kasih/pertanyaan umum/permintaan bikin sesuatu yang BUKAN persis task di atas."
 	routeTool := map[string]any{
 		"type": "function",
 		"function": map[string]any{
