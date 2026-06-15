@@ -103,6 +103,17 @@ elif [ -x "$ROOT/agent/start.sh" ]; then
 else
   c_err "→ agent/start.sh not found — cannot start Flowork"; exit 1
 fi
+echo
+
+# 3) Self-heal — pasang/start watchdog (systemd Restart=always → jaga router+agent,
+# restart yang mati). R9 autonomi. Idempotent; opt-out FLOWORK_NO_WATCHDOG=1.
+if [ "${FLOWORK_NO_WATCHDOG:-0}" != "1" ] && [ -x "$ROOT/os/selfheal/install-watchdog.sh" ]; then
+  if "$ROOT/os/selfheal/install-watchdog.sh" >/dev/null 2>&1; then
+    c_ok "→ Self-heal watchdog armed (docktor) — stack auto-restart on crash"
+  else
+    c_info "→ Self-heal watchdog skipped (no systemd user session?)"
+  fi
+fi
 
 echo
 c_ok  "✅ Flowork is live:"
