@@ -11,6 +11,11 @@ BIN="$ROUTER_ROOT/flow-router-bin"
 
 cd "$ROUTER_ROOT"
 
+# Owner-local env (gitignored) — per-machine tuning (GPU offload, MoE/KV-cache) that must
+# NOT ship in the portable repo. Sourced if present, no-op otherwise (zero default change).
+# E.g. FLOWORK_NGL / FLOWORK_CPU_MOE / FLOWORK_KV_TYPE for local-model speed.
+[ -f "$ROUTER_ROOT/flowork.local.env" ] && set -a && . "$ROUTER_ROOT/flowork.local.env" && set +a
+
 # .desktop launchers run with a minimal PATH (no shell rc files loaded), so
 # `go` from a non-standard install dir won't be found even though it works in
 # the terminal. Probe common Go install locations and prepend the first one

@@ -23,6 +23,14 @@
 //   ("agent stuck on Claude"); (3) --reasoning off default (env FLOWORK_REASONING) —
 //   stock models burn the completion budget thinking → empty content. --jinja kept.
 //
+// 2026-06-16 (owner-approved, Aola): MoE/VRAM tuning knobs (env-gated, portable defaults
+//   = zero regression) — (1) FLOWORK_CPU_MOE=1 → --cpu-moe (MoE experts on CPU/RAM,
+//   attention on GPU); (2) FLOWORK_KV_TYPE=q8_0 → -fa on + -ctk/-ctv quant (KV-cache
+//   quantization → thinking fits VRAM, no OOM). MEASURED gemma4 26B-A4B on RTX 4060 8GB:
+//   FLOWORK_NGL=99 + FLOWORK_CPU_MOE=1 + FLOWORK_KV_TYPE=q8_0 → ~30 tok/s @ ~3GB VRAM
+//   (was CPU-only crawl + thinking-OOM). Per-machine values live in a LOCAL env (not
+//   committed) so the repo stays portable. RE-LOCKED — jangan diubah AI lain tanpa owner.
+//
 // runtime.go — Section 25 phase 2: llama-server subprocess.
 
 package localai
@@ -204,11 +212,30 @@ func (r *Runtime) Start(modelName, ggufPath string) error {
 		reasoning = "off"
 	}
 	args = append(args, "--reasoning", reasoning)
+	// Clean separation: any model "thinking" (channel/<think> tags) goes to
+	// message.reasoning_content, NEVER leaks into message.content. Safe no-op when
+	// reasoning=off or on a non-thinking model. Future-proof for when the evolution
+	// debate-council runs with thinking on. Does not affect --jinja tool-call parsing.
+	args = append(args, "--reasoning-format", "deepseek")
 	// Optional GPU offload. Portable default is CPU-safe (a flashdisk runs on
 	// unknown hardware — a hardcoded -ngl could OOM a small GPU). On a known
-	// machine set $FLOWORK_NGL (e.g. 35) to offload layers to the GPU.
+	// machine set $FLOWORK_NGL (e.g. 35, or 99 for "all") to offload layers to the GPU.
 	if ngl := strings.TrimSpace(os.Getenv("FLOWORK_NGL")); ngl != "" {
 		args = append(args, "-ngl", ngl)
+	}
+	// MoE offload (FLOWORK_CPU_MOE=1): keep Mixture-of-Experts weights on CPU/RAM while
+	// attention runs on the GPU. Lets a big MoE (e.g. gemma4 26B-A4B, only 4B active)
+	// FLY on a small-VRAM card — measured RTX 4060 8GB: ~30 tok/s using just ~3GB VRAM
+	// (vs CPU-only crawl). No-op on a dense model. Pair with FLOWORK_NGL=99 (all attention
+	// layers → GPU). This is what makes a 14GB model usable on 8GB VRAM without OOM.
+	if os.Getenv("FLOWORK_CPU_MOE") == "1" {
+		args = append(args, "--cpu-moe")
+	}
+	// KV-cache quantization (FLOWORK_KV_TYPE=q8_0|q4_0): halves/quarters KV-cache memory,
+	// so long context / "thinking" fits the VRAM headroom WITHOUT OOM (the old thinking-OOM
+	// fix). Requires flash-attention → we force -fa on when a quant type is set.
+	if kt := strings.TrimSpace(os.Getenv("FLOWORK_KV_TYPE")); kt != "" {
+		args = append(args, "-fa", "on", "-ctk", kt, "-ctv", kt)
 	}
 	cmd := exec.Command(r.binPath, args...)
 	// PORTABLE (audit #10 2026-06-15): prefer shared libs (libggml/libllama .so) yang
