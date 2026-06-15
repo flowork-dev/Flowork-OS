@@ -12,6 +12,13 @@
 // WIRING INVARIANT (Aturan #1 Mr.Dev): perubahan ADDITIVE. Primary's 5jt = jangan
 // diputus. Extension's brain-folder = jangan diputus. Gate ini cuma NGATUR siapa
 // dapet tool 5jt — bukan motong brain lokal siapa pun.
+//
+// ⚠️ BY DESIGN — JANGAN "FIX" JADI BUKA AKSES (audit 2026-06-15, owner-confirmed
+// "jangan buka aksesnya"). Worker/extension/group SENGAJA gak nyolok brain 5jt shared
+// + skip enrich berat (lihat router/enrich_tier.go) — INI BUKAN KABEL PUTUS. Alasan:
+// anti-429 (volume call worker gede), fokus tugas (knowledge proyek ga relevan buat
+// worker), portable. Sesuai arsitektur baru: "agent bodoh, engine pinter" + tiering
+// hemat kuota. Kalau owner/AI berikut ngeliat ini & ngira bug → STOP, ini keputusan sadar.
 package agentmgr
 
 import "strings"

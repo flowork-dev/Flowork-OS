@@ -328,12 +328,15 @@ func SeedDefaults(d *sql.DB) error {
 
 	// Local llama-server (any local GGUF model on :8080). Cheap tier — runs
 	// on user hardware, no per-token cost. Also "local" for privacy intent.
+	// 2026-06-15 (audit #6/#10): CLOUD-FIRST default — kebanyakan user pake API,
+	// LLM lokal BERAT + opt-in. Priority 100 (coba TERAKHIR) + IsActive=false
+	// (nyala lewat tombol GUI router, bukan auto). Owner instance gak kepengaruh (DB udah ada).
 	local := &ProviderConnection{
 		Provider: "local-llama",
 		AuthType: AuthTypeNone,
 		Name:     "Local llama-server",
-		Priority: 1, // highest priority by default — sovereign-first
-		IsActive: true,
+		Priority: 100, // last-resort: cloud (Claude prio 10) dicoba dulu
+		IsActive: false, // opt-in: user aktifin via GUI router pas mau pake lokal
 		Data: map[string]any{
 			CfgBaseURL: "http://127.0.0.1:8080/v1",
 			CfgFormat:  "openai",

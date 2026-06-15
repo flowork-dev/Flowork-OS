@@ -907,7 +907,10 @@ func (h *Host) AgentsHandler(w http.ResponseWriter, _ *http.Request) {
 			} else {
 				entry["db_size"] = 0
 			}
-			if hasSharedCap(d.Manifest) {
+			// Pakai EFFECTIVE cap (Broker, post privileged-filter) biar report jujur —
+			// kalau filter nyabut fs:shared, jangan ngaku punya /shared (audit #3 2026-06-15).
+			if (h.Broker != nil && h.Broker.IsApproved(d.Manifest.ID, "fs:shared")) ||
+				(h.Broker == nil && hasSharedCap(d.Manifest)) {
 				entry["shared_host"] = h.SharedDir
 				entry["shared_guest"] = "/shared"
 			}

@@ -111,6 +111,14 @@ func (e *Engine) RunNow(ruleID string) (int64, error) {
 
 // runAction — JANTUNG aksi (poll/webhook/manual): render prompt → invoke agent/group → deliver.
 // Reuse Invoke (InvokeAgentMessage) + Notify (notifyOwnerTelegram). Balik run id.
+//
+// ⚠️ BY DESIGN (audit #5 2026-06-15, keputusan AI owner-delegated): r.Target di-invoke
+// LANGSUNG via InvokeAgentMessage — GROUP itu sendiri agent-coordinator yang fan-out ke
+// member, jadi target=group OTOMATIS jalan sbg gateway (gak perlu logika khusus). target_kind
+// = informational. Konvensi "worker cuma lewat group" DIPEGANG di sisi PEMBUAT (architect/
+// schedule-creator/mr-flow-next semua route ke group). JANGAN tambah hard-block invoke-langsung
+// di sini — itu malah NABRAK jalur debug/test (/api/chat, RPC) yang sengaja ada. Sesuai
+// arsitektur baru (group=gateway by convention, bukan by force).
 func (e *Engine) runAction(r floworkdb.Trigger, ev Event, trigger string) int64 {
 	payloadJSON, _ := json.Marshal(ev.Payload)
 	runID, _ := e.Store.InsertTriggerRun(r.ID, trigger, string(payloadJSON))

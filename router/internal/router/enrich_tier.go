@@ -15,6 +15,11 @@
 // (sonnet) tetep full. ANTIBODY (anti-halu) TETEP buat semua (kecil + penting).
 //
 // Tunable: env FLOW_ROUTER_LIGHT_MODELS (koma-separated substring). Default "haiku".
+//
+// ⚠️ BY DESIGN — JANGAN "FIX" JADI ENRICH SEMUA (audit 2026-06-15, owner-confirmed
+// "jangan buka aksesnya"). Crew/haiku SENGAJA di-skip enrich berat — INI BUKAN BUG.
+// Buka enrich ke semua = balik ke 429 (bakar kuota). Sesuai arsitektur baru (tiering
+// hemat kuota). Kalau ada yg ngira ini kabel putus → STOP, ini keputusan sadar.
 
 package router
 
