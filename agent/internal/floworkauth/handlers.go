@@ -12,10 +12,11 @@
 // browser request (Sec-Fetch-Site) dicabut dari bypass loopback, biar web jahat
 // yang dibuka owner ga bisa memicu exec/install via fetch ke 127.0.0.1.
 //
-// 2026-06-15 (owner-approved autonomous sprint): added "/api/architect/build" to the
-// loopback-gated allowlist — same trust model as the existing /api/coder/* cases
-// (owner-local, loopback-only POST, behind isLocalRequest + the cross-site-browser
-// cut). No new attack surface; re-locked. (Pending owner ratification on wake.)
+// 2026-06-15 (owner-approved autonomous sprint): added "/api/architect/build" + the
+// "/api/chat/sessions*" + "/api/chat/send" family to the loopback-gated allowlist —
+// same trust model as the existing /api/coder/* + /api/chat cases (owner-local,
+// loopback-only, behind isLocalRequest + the cross-site-browser cut). No new attack
+// surface; re-locked. (Pending owner ratification on wake.)
 //
 // handlers.go — HTTP endpoint + middleware untuk floworkauth.
 //
@@ -283,6 +284,13 @@ func isPublicPath(r *http.Request) bool {
 	case "/api/chat":
 		// Channel HTTP/CLI ke mr-flow (roadmap Channels) — loopback-only owner-local.
 		return r.Method == http.MethodPost && isLocalRequest(r)
+	case "/api/chat/sessions", "/api/chat/sessions/rename", "/api/chat/sessions/delete",
+		"/api/chat/sessions/meta", "/api/chat/sessions/messages", "/api/chat/send":
+		// CHATGPT-STYLE CHAT TAB (Group): persistent sessions + full-context chat with a
+		// group or the Architect. Owner-local, loopback-only (server binds 127.0.0.1;
+		// behind isLocalRequest + the cross-site-browser cut above). Same trust model as
+		// /api/chat + /api/architect/build.
+		return isLocalRequest(r)
 	case "/api/tools/install", "/api/tools/uninstall":
 		// TOOL-PACK plug-and-play (multi-KIND) install/uninstall — loopback owner-local.
 		return r.Method == http.MethodPost && isLocalRequest(r)

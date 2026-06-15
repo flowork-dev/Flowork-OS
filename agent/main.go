@@ -696,6 +696,17 @@ func main() {
 	// generate tiap specialist+lead (mesin coder yg sama) → groupsapi.CreateGroup.
 	// Hasil: group muncul di tab Group, chat via /api/chat agent=<group_id>, slash auto.
 	mux.HandleFunc("/api/architect/build", architectBuildHandler(host, fdb, groupsAPI))
+	// CHAT SESSIONS (ChatGPT-style tab in Group): persistent sessions + full-context
+	// conversation with a group (talk to a team) or the Architect (brainstorm + build).
+	if cerr := fdb.EnsureChatSchema(); cerr != nil {
+		log.Printf("chat: EnsureChatSchema: %v", cerr)
+	}
+	mux.HandleFunc("/api/chat/sessions", chatSessionsHandler(fdb))
+	mux.HandleFunc("/api/chat/sessions/rename", chatSessionRenameHandler(fdb))
+	mux.HandleFunc("/api/chat/sessions/delete", chatSessionDeleteHandler(fdb))
+	mux.HandleFunc("/api/chat/sessions/meta", chatSessionMetaHandler(fdb))
+	mux.HandleFunc("/api/chat/sessions/messages", chatMessagesHandler(fdb))
+	mux.HandleFunc("/api/chat/send", chatSendHandler(host, fdb, groupsAPI))
 	// REAPER (AI Utama 2.4): apoptosis — surface app broken/failing → owner reap.
 	mux.HandleFunc("/api/reaper/candidates", reaperCandidatesHandler(host, fdb))
 	mux.HandleFunc("/api/reaper/reap", reaperReapHandler(fdb))

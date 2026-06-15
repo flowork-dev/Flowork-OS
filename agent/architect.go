@@ -81,10 +81,10 @@ type teamPlan struct {
 	Lead        teamLead     `json:"lead"`
 }
 
-// architectDesignTeam — one Opus forced-tool call → the full team design. tool_choice
-// is forced (no free-text hallucination; same pattern as coderDesignSpec).
-func architectDesignTeam(ctx context.Context, prompt, model string) (teamPlan, error) {
-	var plan teamPlan
+// teamPlanSchema — the JSON-Schema for a full team design (group + specialists + lead),
+// shared by the design_team forced-tool (one-shot endpoint) and the build_team chat tool
+// (conversational brain) so the two never drift.
+func teamPlanSchema() map[string]any {
 	workerItem := map[string]any{
 		"type": "object",
 		"properties": map[string]any{
@@ -92,37 +92,44 @@ func architectDesignTeam(ctx context.Context, prompt, model string) (teamPlan, e
 			"name":        map[string]any{"type": "string", "description": "nama specialist human-readable (mis. 'Ahli Primbon Jawa')."},
 			"icon":        map[string]any{"type": "string", "description": "1 emoji yang cocok."},
 			"role":        map[string]any{"type": "string", "description": "label peran singkat (mis. 'penafsir weton')."},
-			"persona":     map[string]any{"type": "string", "description": "persona/system-prompt specialist ini (keahlian + gaya). RINGKAS."},
+			"persona":     map[string]any{"type": "string", "description": "persona/system-prompt specialist ini (keahlian + gaya). RINGKAS (1 keahlian fokus)."},
 			"directive":   map[string]any{"type": "string", "description": "cara kerja specialist. Kalau KREATIF/tradisi (ga butuh data real) bilang itu tugasnya; kalau ANALISIS suruh cari data."},
 		},
 		"required": []string{"category_id", "name", "icon", "role", "persona", "directive"},
 	}
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"group_id":     map[string]any{"type": "string", "description": "id slug unik group, lowercase-dash, 2-26 char (mis. 'peramal', 'tim-kuliner')."},
+			"display_name": map[string]any{"type": "string", "description": "nama tim human-readable (mis. 'Tim Peramal')."},
+			"task":         map[string]any{"type": "string", "description": "instruksi kerja BERSAMA tim: apa yg tim hasilkan + cara koordinasi. SINGKAT."},
+			"specialists":  map[string]any{"type": "array", "description": "2-4 specialist (worker) yg saling melengkapi.", "minItems": 2, "maxItems": 4, "items": workerItem},
+			"lead": map[string]any{
+				"type":        "object",
+				"description": "lead/synthesizer yg gabungin output para specialist jadi 1 jawaban final.",
+				"properties": map[string]any{
+					"name":      map[string]any{"type": "string", "description": "nama lead (mis. 'Peramal Utama')."},
+					"icon":      map[string]any{"type": "string", "description": "1 emoji."},
+					"persona":   map[string]any{"type": "string", "description": "persona/system-prompt lead (perakit jawaban final). RINGKAS."},
+					"directive": map[string]any{"type": "string", "description": "format output final: struktur + gaya. SINGKAT."},
+				},
+				"required": []string{"name", "icon", "persona", "directive"},
+			},
+		},
+		"required": []string{"group_id", "display_name", "task", "specialists", "lead"},
+	}
+}
+
+// architectDesignTeam — one Opus forced-tool call → the full team design. tool_choice
+// is forced (no free-text hallucination; same pattern as coderDesignSpec).
+func architectDesignTeam(ctx context.Context, prompt, model string) (teamPlan, error) {
+	var plan teamPlan
 	tool := map[string]any{
 		"type": "function",
 		"function": map[string]any{
 			"name":        "design_team",
 			"description": "Rancang 1 TIM (group) Flowork LENGKAP dari permintaan user: 2-4 specialist (worker) yg saling melengkapi + 1 lead (synthesizer). Isi SEMUA field sekali jalan. WAJIB dipanggil sekali.",
-			"parameters": map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"group_id":     map[string]any{"type": "string", "description": "id slug unik group, lowercase-dash, 2-26 char (mis. 'peramal', 'tim-kuliner')."},
-					"display_name": map[string]any{"type": "string", "description": "nama tim human-readable (mis. 'Tim Peramal')."},
-					"task":         map[string]any{"type": "string", "description": "instruksi kerja BERSAMA tim: apa yg tim hasilkan + cara koordinasi. SINGKAT."},
-					"specialists":  map[string]any{"type": "array", "description": "2-4 specialist (worker) yg saling melengkapi.", "minItems": 2, "maxItems": 4, "items": workerItem},
-					"lead": map[string]any{
-						"type":        "object",
-						"description": "lead/synthesizer yg gabungin output para specialist jadi 1 jawaban final.",
-						"properties": map[string]any{
-							"name":      map[string]any{"type": "string", "description": "nama lead (mis. 'Peramal Utama')."},
-							"icon":      map[string]any{"type": "string", "description": "1 emoji."},
-							"persona":   map[string]any{"type": "string", "description": "persona/system-prompt lead (perakit jawaban final). RINGKAS."},
-							"directive": map[string]any{"type": "string", "description": "format output final: struktur + gaya. SINGKAT."},
-						},
-						"required": []string{"name", "icon", "persona", "directive"},
-					},
-				},
-				"required": []string{"group_id", "display_name", "task", "specialists", "lead"},
-			},
+			"parameters":  teamPlanSchema(),
 		},
 	}
 	args, err := routerForcedTool(ctx, model,
@@ -240,14 +247,13 @@ func architectAssembleTeamPack(plan teamPlan) ([]byte, []string, string, error) 
 	return pack, members, synthID, nil
 }
 
-// architectBuild — full pipeline from a single design call: design → assemble the WHOLE
-// team into ONE pack → install once → create the coordinator group. All steps after the
-// one LLM call are local Go (fast). No orphan agents; members are group-prefixed.
-func architectBuild(ctx context.Context, host *kernelhost.Host, store *floworkdb.Store, groups *groupsapi.Handler, prompt, model string) (map[string]any, error) {
-	plan, err := architectDesignTeam(ctx, prompt, model)
-	if err != nil {
-		return nil, fmt.Errorf("design team: %w", err)
-	}
+// architectBuildFromPlan — build a team from an ALREADY-DECIDED plan (no design LLM
+// call): assemble the whole team into ONE pack → install → create the coordinator
+// group. This is what the chat brain calls on the build_team tool, so the team built
+// is EXACTLY the one discussed (not a re-design). Re-callable: same group_id rebuilds.
+func architectBuildFromPlan(ctx context.Context, host *kernelhost.Host, store *floworkdb.Store, groups *groupsapi.Handler, plan teamPlan) (map[string]any, error) {
+	plan.GroupID = strings.ToLower(strings.TrimSpace(plan.GroupID))
+	plan.DisplayName = strings.TrimSpace(plan.DisplayName)
 	if !idReGroup.MatchString(plan.GroupID) {
 		return nil, fmt.Errorf("group_id invalid/too long (2-26 lowercase-dash): %q", plan.GroupID)
 	}
@@ -257,7 +263,6 @@ func architectBuild(ctx context.Context, host *kernelhost.Host, store *floworkdb
 	if len(plan.Specialists) == 0 {
 		return nil, fmt.Errorf("plan has no specialists")
 	}
-
 	pack, members, synthesizer, aerr := architectAssembleTeamPack(plan)
 	if aerr != nil {
 		return nil, fmt.Errorf("assemble team: %w", aerr)
@@ -265,12 +270,10 @@ func architectBuild(ctx context.Context, host *kernelhost.Host, store *floworkdb
 	if res := installPluginPack(host, store, pack, true); res.status != 0 {
 		return nil, fmt.Errorf("install team failed: %v", res.body)
 	}
-
 	// Wire the coordinator group (folder + roster + orchestrator sync). Live now.
 	if cerr := groups.CreateGroup(plan.GroupID, plan.DisplayName, members, synthesizer, plan.Task); cerr != nil {
 		return nil, fmt.Errorf("create group: %w", cerr)
 	}
-
 	return map[string]any{
 		"ok":           true,
 		"group_id":     plan.GroupID,
@@ -281,6 +284,17 @@ func architectBuild(ctx context.Context, host *kernelhost.Host, store *floworkdb
 		"chat":         fmt.Sprintf("POST /api/chat {\"agent\":%q,\"text\":\"...\"}", plan.GroupID),
 		"next":         "Team is live in the Group tab + Telegram slash menu. Chat it via the group id above.",
 	}, nil
+}
+
+// architectBuild — one-shot: design a team from a prompt (one LLM call) then build it.
+// Used by POST /api/architect/build. The conversational chat brain instead designs
+// through dialogue and calls architectBuildFromPlan directly.
+func architectBuild(ctx context.Context, host *kernelhost.Host, store *floworkdb.Store, groups *groupsapi.Handler, prompt, model string) (map[string]any, error) {
+	plan, err := architectDesignTeam(ctx, prompt, model)
+	if err != nil {
+		return nil, fmt.Errorf("design team: %w", err)
+	}
+	return architectBuildFromPlan(ctx, host, store, groups, plan)
 }
 
 // architectBuildHandler — POST /api/architect/build {prompt|task, model?}.
