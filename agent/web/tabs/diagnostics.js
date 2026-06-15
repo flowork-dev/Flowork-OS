@@ -563,7 +563,7 @@ export async function render(root, agentId) {
     if (filtered.length === 0) {
       const msg = q
         ? `Ngga ada entry cocok "${q}".`
-        : `Belum ada data ${sec.label.toLowerCase()} untuk Mr.Flow.`;
+        : `Belum ada data ${sec.label.toLowerCase()} untuk ${esc(AGENT_ID)}.`;
       listEl.innerHTML = `
         <div class="dg-empty">
           <div class="dg-empty-icon">${sec.icon}</div>

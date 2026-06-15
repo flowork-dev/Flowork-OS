@@ -11,6 +11,10 @@
 // 2026-06-03 TWEAK (param-only): InvokeAgentMessage deadline 180s→300s (selaras
 //   manifest timeout_call_ms=300000) — fix synth crew 6-agent kena deadline.
 //   Cap doang, ga ngubah orkestrasi/isolasi.
+// 2026-06-15 OWNER-APPROVED (FASE 2 autonomi): InvokeAgentMessage skarang catat
+//   SELF-AWARENESS di choke-point (recordInvokeSelfKnowledge) — interaction+decision+karma
+//   per invoke buat SEMUA agent (dulu cuma mr-flow legacy opt-in). Best-effort, additive,
+//   nol ubah orkestrasi/isolasi. Fuel buat gate auto-commit R7 + ngidupin menu Diagnostics.
 // 2026-06-11 OWNER-APPROVED (frozen file unfreeze→refreeze, KERNEL_FREEZE.md hash
 //   regenerated): buildAgentEnv forward-allowlist + DEVTO_API_KEY/X_AUTH_TOKEN/
 //   X_CT0/LINKEDIN_COOKIE so a per-platform promo group reads its own publishing
@@ -1111,6 +1115,34 @@ func (h *Host) karmaUpdate(pluginID, op, key string, value float64) (float64, er
 	}
 }
 
+// recordInvokeSelfKnowledge — SELF-AWARENESS (fuel R7), owner-approved 2026-06-15.
+// Di CHOKE-POINT InvokeAgentMessage: catat interaction(in/out) + decision + karma di store
+// agent yang di-invoke → SEMUA agent ke-cover OTOMATIS (gak perlu opt-in per-wasm; dulu cuma
+// mr-flow legacy yang self-log). Best-effort: semua error di-swallow biar nggak ganggu invoke.
+// cachedStore dipakai (murah). karma invoke_success/invoke_fail = track-record buat gate
+// auto-commit R7. (Mistakes=halu-detection & Workspace=resource-catalog di-wire terpisah.)
+func (h *Host) recordInvokeSelfKnowledge(agentID, caller, text, reply string, callErr error) {
+	if h == nil || agentID == "" {
+		return
+	}
+	clip := func(s string, n int) string {
+		if len(s) > n {
+			return s[:n]
+		}
+		return s
+	}
+	_ = h.logInteraction(agentID, "invoke", "in", caller, clip(text, 4000), nil)
+	if callErr != nil {
+		_ = h.logInteraction(agentID, "invoke", "out", agentID, "error: "+clip(callErr.Error(), 2000), nil)
+		_, _ = h.logDecision(agentID, "agent_invoke", "invoke gagal: "+clip(callErr.Error(), 240), "fail", map[string]any{"caller": caller}, 0)
+		_, _ = h.karmaUpdate(agentID, "increment", "invoke_fail", 1)
+		return
+	}
+	_ = h.logInteraction(agentID, "invoke", "out", agentID, clip(reply, 8000), nil)
+	_, _ = h.logDecision(agentID, "agent_invoke", "invoke ok", "ok", map[string]any{"caller": caller, "reply_len": len(reply)}, 0)
+	_, _ = h.karmaUpdate(agentID, "increment", "invoke_success", 1)
+}
+
 // SharedDirForAgent — return absolute path ke shared workspace per agent
 // (`<SharedDir>/<agentID>/`). Buat dispatcher tool ops yang butuh fs access.
 //
@@ -1176,6 +1208,7 @@ func (h *Host) InvokeAgentMessage(ctx context.Context, agentID, text, caller str
 	defer cancel()
 	respBytes, err := inst.Call(callCtx, "handle_message", bodyJSON)
 	if err != nil {
+		h.recordInvokeSelfKnowledge(agentID, caller, text, "", err) // self-awareness choke-point
 		return "", err
 	}
 	var out struct {
@@ -1183,11 +1216,16 @@ func (h *Host) InvokeAgentMessage(ctx context.Context, agentID, text, caller str
 		Error string `json:"error"`
 	}
 	if jerr := json.Unmarshal(respBytes, &out); jerr != nil {
-		return string(respBytes), nil
+		reply := string(respBytes)
+		h.recordInvokeSelfKnowledge(agentID, caller, text, reply, nil)
+		return reply, nil
 	}
 	if out.Error != "" {
-		return "", fmt.Errorf("%s", out.Error)
+		aerr := fmt.Errorf("%s", out.Error)
+		h.recordInvokeSelfKnowledge(agentID, caller, text, "", aerr)
+		return "", aerr
 	}
+	h.recordInvokeSelfKnowledge(agentID, caller, text, out.Reply, nil)
 	return out.Reply, nil
 }
 

@@ -832,6 +832,9 @@ func main() {
 	// R6 self-map semantik: lapisan MAKNA di atas self-map deterministik (LLM di-inject).
 	mux.HandleFunc("/api/codemap/enrich", agentmgr.CodemapEnrichHandler(codemapSemanticSummarizer()))
 	mux.HandleFunc("/api/codemap/semantic", agentmgr.CodemapSemanticHandler)
+	// R7 self-evolution fase-1: refleksi-diri (baca self-map → usul perbaikan → backlog + karma).
+	mux.HandleFunc("/api/evolve/reflect", agentmgr.EvolveReflectHandler(evolveProposer()))
+	mux.HandleFunc("/api/evolve/proposals", agentmgr.EvolveProposalsHandler)
 	mux.HandleFunc("/api/agents/protector/approval/queue", agentmgr.ApprovalQueueHandler)
 	mux.HandleFunc("/api/agents/protector/approve_pending", agentmgr.ApproveHandler)
 	mux.HandleFunc("/api/agents/protector/reject_pending", agentmgr.RejectHandler)
