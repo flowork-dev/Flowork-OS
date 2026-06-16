@@ -105,7 +105,29 @@ else
 fi
 echo
 
-# 3) Self-heal — pasang/start watchdog (systemd Restart=always → jaga router+agent,
+# 3) Semantic RAG — auto-build/resume the by-meaning index on launch.
+#    Skips INSTANTLY when already built (.vindex + .DONE) so a normal boot NEVER
+#    re-embeds (a full re-embed is hours). When missing/interrupted it builds in
+#    the BACKGROUND (detached) and the router lazy-loads brain.vindex the moment
+#    it appears — no restart. The launcher itself builds its Go tooling from
+#    router/cmd/* on first run (plug-and-play). Opt-out: FLOWORK_NO_RAG=1.
+RAG_SH="$ROOT/router/scripts/rag-autostart.sh"
+if [ "${FLOWORK_NO_RAG:-0}" != "1" ] && [ -f "$RAG_SH" ]; then
+  if [ -s "$ROOT/router/brain/brain.vindex" ] && [ -f "$ROOT/router/brain/_rag/rag-pipeline.DONE" ]; then
+    c_ok "→ Semantic RAG index ready — search by-meaning is live"
+  elif pgrep -f 'brain/_rag/bin/reembed' >/dev/null 2>&1; then
+    c_info "→ Semantic RAG index — build already in progress (background)"
+  else
+    GLOG="$ROOT/router/brain/_rag/rag-pipeline.log"
+    mkdir -p "$ROOT/router/brain/_rag"
+    c_info "→ Semantic RAG index — building/resuming in background (first run can take hours)…"
+    c_info "   log → $GLOG"
+    ( setsid nohup bash "$RAG_SH" >>"$GLOG" 2>&1 </dev/null & )
+  fi
+  echo
+fi
+
+# 4) Self-heal — pasang/start watchdog (systemd Restart=always → jaga router+agent,
 # restart yang mati). R9 autonomi. Idempotent; opt-out FLOWORK_NO_WATCHDOG=1.
 if [ "${FLOWORK_NO_WATCHDOG:-0}" != "1" ] && [ -x "$ROOT/os/selfheal/install-watchdog.sh" ]; then
   if "$ROOT/os/selfheal/install-watchdog.sh" >/dev/null 2>&1; then

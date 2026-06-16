@@ -36,6 +36,17 @@ if exist "%~dp0agent\start.bat" (
     exit /b 1
 )
 
+REM --- Semantic RAG index: auto-build/resume on launch (skip if already built). ---
+REM Pipeline is bash + Go tooling; on Windows it runs via bash (WSL / Git Bash).
+REM The launcher self-guards: if the index is already built it just exits fast.
+REM A native-Windows build path is a tracked follow-up. Opt-out: set FLOWORK_NO_RAG=1.
+if not "%FLOWORK_NO_RAG%"=="1" (
+    where bash >nul 2>&1 && (
+        echo - Semantic RAG index: auto-build/resume in background ^(via bash^)...
+        start "Flowork RAG" /min bash -c "nohup bash router/scripts/rag-autostart.sh >> router/brain/_rag/rag-pipeline.log 2>&1 &"
+    ) || echo - Semantic RAG: bash not found - skipped ^(needs WSL/Git Bash; native-Windows build pending^).
+)
+
 echo.
 echo Flowork is starting:
 echo    Control panel ^>  http://127.0.0.1:1987
