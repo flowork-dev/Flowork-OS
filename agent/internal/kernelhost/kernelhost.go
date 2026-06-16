@@ -1229,6 +1229,18 @@ func (h *Host) OpenAgentStore(agentID string) (*agentdb.Store, error) {
 // InvokeAgentMessage — Section 18 scheduler executor: call WASM agent
 // handle_message RPC dengan task text. Return reply text or error.
 func (h *Host) InvokeAgentMessage(ctx context.Context, agentID, text, caller string) (string, error) {
+	// 300s: selaras manifest timeout_call_ms=300000. Worker taskflow (riset
+	// multi-tool serialized) + synthesizer (file_read 5 file + generate panjang)
+	// butuh >180s — synth crew 6-agent kena deadline di 180s (run 11 promo).
+	// Cap, BUKAN wait tetap: agent cepet tetep balik cepet. Scheduler aman.
+	return h.InvokeAgentMessageTimeout(ctx, agentID, text, caller, 300*time.Second)
+}
+
+// InvokeAgentMessageTimeout — sama spt InvokeAgentMessage tapi cap-nya CALLER yang
+// tentuin. Dipake OPS-1 async-group: GROUP module orkestrasi SELURUH crew (debate/
+// parallel) + synthesizer DI DALAM satu handle_message — jadi butuh budget jauh >300s
+// (mis. 25 menit). Cap = ctx host (wazero hormati cancel), BUKAN hard-cap WASM.
+func (h *Host) InvokeAgentMessageTimeout(ctx context.Context, agentID, text, caller string, timeout time.Duration) (string, error) {
 	if h == nil || h.Runtime == nil {
 		return "", fmt.Errorf("nil host/runtime")
 	}
@@ -1241,11 +1253,10 @@ func (h *Host) InvokeAgentMessage(ctx context.Context, agentID, text, caller str
 		"user": caller,
 	}
 	bodyJSON, _ := json.Marshal(args)
-	// 300s: selaras manifest timeout_call_ms=300000. Worker taskflow (riset
-	// multi-tool serialized) + synthesizer (file_read 5 file + generate panjang)
-	// butuh >180s — synth crew 6-agent kena deadline di 180s (run 11 promo).
-	// Cap, BUKAN wait tetap: agent cepet tetep balik cepet. Scheduler aman.
-	callCtx, cancel := context.WithTimeout(ctx, 300*time.Second)
+	if timeout <= 0 {
+		timeout = 300 * time.Second
+	}
+	callCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	respBytes, err := inst.Call(callCtx, "handle_message", bodyJSON)
 	if err != nil {

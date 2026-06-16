@@ -1028,7 +1028,43 @@ func groupCommandsJSON() string {
 // handleThinking runs the thinking colony for one user message, with per-chat
 // rolling memory so it can continue a multi-turn diagnosis. Used by BOTH the slash
 // command and the legacy keyword trigger.
+// handleGroupChat — entry buat slash-group + thinking pre-router. Dari Telegram (chatID != 0)
+// group BERAT (multi-agent / debate) bisa >4 mnt → kalau SYNC, channel timeout ("loket: no
+// response"). Generalisasi pola saham (OPS-1): delegasi ASYNC via task_run(group=…) — ACK cepet,
+// crew (member+synth+debate) jalan di belakang, hasil di-notify balik ke chat pas kelar. Bot gak
+// pernah timeout. Trade-off: turn async gak nyimpen memory percakapan (konsisten sama saham async).
+// chatID==0 (internal/non-Telegram) tetap SYNC (handleGroupChatSync) — perilaku lama, NOL regresi.
 func handleGroupChat(groupID, userMsg string, chatID int64) {
+	userMsg = strings.TrimSpace(userMsg)
+	if chatID != 0 {
+		args := json.RawMessage(`{"group":` + jsonStr(groupID) + `,"subject":` + jsonStr(userMsg) +
+			`,"notify_chat_id":` + jsonStr(strconv.FormatInt(chatID, 10)) + `}`)
+		out := toolRun("task_run", args)
+		if !strings.Contains(out, `"error"`) { // dispatch sukses → ACK, hasil nyusul lewat notify
+			emit(map[string]any{"reply": groupAckMsg(groupID), "agent": selfID()})
+			return
+		}
+		// dispatch GAGAL (validasi cepet — group ga kebaca / bukan group=1 / no member; BUKAN
+		// timeout) → fallback SYNC biar user tetap dapet jawaban/error yang jelas, bukan diem.
+	}
+	handleGroupChatSync(groupID, userMsg, chatID)
+}
+
+// groupAckMsg — ACK ramah pas delegasi group async; sebut deskripsi group kalau ada.
+func groupAckMsg(groupID string) string {
+	label := groupID
+	for _, g := range availableGroups() {
+		if g.ID == groupID {
+			if d := strings.TrimSpace(g.Desc); d != "" {
+				label = d
+			}
+			break
+		}
+	}
+	return "⏳ Oke bro, gw lempar ke tim " + label + " — lagi digarap. Beberapa menit ya, hasilnya gw kabarin di chat ini pas kelar 🙌"
+}
+
+func handleGroupChatSync(groupID, userMsg string, chatID int64) {
 	userMsg = strings.TrimSpace(userMsg)
 	mem := true
 	for _, g := range availableGroups() {

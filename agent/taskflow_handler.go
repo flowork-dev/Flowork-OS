@@ -24,12 +24,16 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"flowork-gui/internal/agentdb"
 	"flowork-gui/internal/floworkdb"
 	"flowork-gui/internal/kernelhost"
+	"flowork-gui/internal/loket"
 	"flowork-gui/internal/taskflow"
 )
 
@@ -128,9 +132,22 @@ func taskflowRunHandler(host *kernelhost.Host, store *floworkdb.Store) http.Hand
 			return
 		}
 		category := strings.TrimSpace(r.URL.Query().Get("category"))
+		group := strings.TrimSpace(r.URL.Query().Get("group"))
 		subject := strings.TrimSpace(r.URL.Query().Get("subject"))
-		if category == "" || subject == "" {
-			tfWriteJSON(w, http.StatusBadRequest, map[string]any{"error": "category + subject required"})
+		if subject == "" || (category == "" && group == "") {
+			tfWriteJSON(w, http.StatusBadRequest, map[string]any{"error": "subject + (category atau group) wajib"})
+			return
+		}
+		// OPS-1: GROUP async — ask_group BERAT di Telegram → run crew di belakang + notify (anti-timeout).
+		if group != "" {
+			notify := strings.TrimSpace(r.URL.Query().Get("notify"))
+			runID, err := startGroupTaskRun(host, store, group, subject, notify)
+			if err != nil {
+				tfWriteJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+				return
+			}
+			tfWriteJSON(w, 0, map[string]any{"run_id": runID, "status": "running", "group": group,
+				"poll": "/api/taskflow/run-detail?id=" + strconv.FormatInt(runID, 10)})
 			return
 		}
 
@@ -159,6 +176,87 @@ func taskflowRunHandler(host *kernelhost.Host, store *floworkdb.Store) http.Hand
 			"poll": "/api/taskflow/run-detail?id=" + strconv.FormatInt(runID, 10),
 		})
 	}
+}
+
+// startGroupTaskRun — OPS-1: jalanin GROUP ASYNC + notify, buat ask_group BERAT di Telegram
+// biar gak timeout ("loket: no response").
+//
+// PENTING: GROUP module orkestrasi SENDIRI seluruh crew-nya — termasuk mode DEBATE (multi-ronde
+// kritik/revisi) + synthesizer-nya sendiri — DI DALAM satu handle_message. Jadi kita INVOKE
+// module group langsung (host.InvokeAgentMessageTimeout), PERSIS spt ask_group sync (bus.request
+// type=task), TAPI di goroutine + budget gede (25 mnt). Rebuild Category manual SALAH: bakal
+// kehilangan debate + pake fan-out parallel doang. ADDITIVE — gak nyentuh startTaskflowRun.
+// groupIDRe — pola id GROUP kanonik (sama spt internal/groupsapi idRe). startGroupTaskRun
+// bikin PATH filesystem dari groupID (query param) → wajib divalidasi DULU biar gak ada
+// path-traversal ("../") walau endpoint loopback-only. Defense-in-depth.
+var groupIDRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{1,39}$`)
+
+func startGroupTaskRun(host *kernelhost.Host, store *floworkdb.Store, groupID, subject, notify string) (int64, error) {
+	if !groupIDRe.MatchString(groupID) {
+		return 0, fmt.Errorf("group id invalid (^[a-z0-9][a-z0-9-]{1,39}$): %q", groupID)
+	}
+	// Guard: pastiin ini beneran GROUP (kv group=1 di loket store-nya), bukan agent biasa.
+	// Path kanonik loket = sama spt kernel (lihat main.go LoketStorePath). Isolasi per-module dijaga.
+	staged := filepath.Join(host.AgentsDir, groupID+".fwagent")
+	loketPath := filepath.Join(filepath.Dir(agentdb.Resolve(groupID, staged)), "loket.db")
+	st, err := loket.OpenStore(loketPath)
+	if err != nil {
+		return 0, fmt.Errorf("buka loket group %q: %w", groupID, err)
+	}
+	isGroup, _, _ := st.KVGet("group")
+	membersCSV, _, _ := st.KVGet("members")
+	st.Close()
+	if strings.TrimSpace(isGroup) != "1" {
+		return 0, fmt.Errorf("%q bukan group (group!=1)", groupID)
+	}
+	hasMember := false
+	for _, m := range strings.Split(membersCSV, ",") {
+		if strings.TrimSpace(m) != "" {
+			hasMember = true
+			break
+		}
+	}
+	if !hasMember {
+		return 0, fmt.Errorf("group %q gak ada member", groupID)
+	}
+	runID, err := store.CreateRun(groupID, subject, "owner", notify)
+	if err != nil {
+		return 0, fmt.Errorf("create run: %w", err)
+	}
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[taskflow] group run #%d PANIC: %v", runID, r)
+				_ = store.FinishRun(runID, "error", fmt.Sprintf("panic: %v", r))
+			}
+		}()
+		// 25 mnt: budget buat SELURUH orkestrasi group (semua member × ronde debat + synth)
+		// yang jalan di dalam satu handle_message. Cap, bukan wait — group cepet balik cepet.
+		// Deadline DIMILIKI InvokeAgentMessageTimeout (jangan dobel WithTimeout di sini — biar
+		// klasifikasi infra-timeout vs mistake di recordInvokeSelfKnowledge tetap akurat).
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		reply, ierr := host.InvokeAgentMessageTimeout(ctx, groupID, subject, "telegram-async", 25*time.Minute)
+		status, summary := "done", strings.TrimSpace(reply)
+		if ierr != nil {
+			status = "error"
+			summary = ierr.Error()
+		} else if summary == "" {
+			status = "error"
+			summary = "group balik kosong"
+		}
+		_ = store.FinishRun(runID, status, summary)
+		if notify != "" {
+			head := fmt.Sprintf("✅ Hasil tim %s — %s (run #%d):\n\n", groupID, subject, runID)
+			if status == "error" {
+				head = fmt.Sprintf("⚠️ tim %s — %s (run #%d) gagal:\n\n", groupID, subject, runID)
+			}
+			notifyTelegram(host, notify, head+summary)
+		} else {
+			log.Printf("[taskflow] group run #%d %s — notify=NONE", runID, status)
+		}
+	}()
+	return runID, nil
 }
 
 // startTaskflowRun — bikin run + jalanin Category Task ASYNC (goroutine) +
