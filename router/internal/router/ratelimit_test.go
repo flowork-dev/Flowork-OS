@@ -51,7 +51,9 @@ func TestDispatchSlot_Semaphore(t *testing.T) {
 			return false
 		}
 	}
-	if !acq() || !acq() {
+	// acq() PUNYA side-effect (ambil 1 slot) — panggil 2x EKSPLISIT (bukan x||x redundan; SA4000 false-positive).
+	got1, got2 := acq(), acq()
+	if !got1 || !got2 {
 		t.Fatal("2 slot pertama harusnya langsung dapet")
 	}
 	if acq() {
