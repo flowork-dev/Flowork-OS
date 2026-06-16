@@ -2,7 +2,8 @@
 // Status: STABLE — DO NOT MODIFY without owner approval.
 // Owner: Aola Sahidin (Mr.Dev)
 // Repo: https://github.com/flowork-os/Flowork-OS
-// Locked at: 2026-05-30
+// Locked at: 2026-05-30 · re-edit 2026-06-17 (owner-approved): Explore count LIVE drawers
+//   (deleted_at IS NULL) — konsisten sama stats.go, Content overview gak nunjuk 5M tombstoned. Re-LOCK.
 // Reason: Audit pass — Brain drawer/embeddings/skills.
 
 // Brain content explorer (read-only).
@@ -45,13 +46,15 @@ func Explore(ctx context.Context) ExploreStats {
 		return st
 	}
 	st.Available = true
-	// Total drawers (FTS searches the whole corpus regardless of tombstone).
-	_ = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM drawers`).Scan(&st.DrawersActive)
+	// LIVE drawers only (deleted_at IS NULL): per 2026-06-17 retrieval SKIP tombstoned,
+	// jadi overview WAJIB konsisten sama stats.go (corpus retrievable beneran, bukan 5M
+	// yg 83% soft-deleted). DrawersActive = ACTIVE = live.
+	_ = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM drawers WHERE deleted_at IS NULL`).Scan(&st.DrawersActive)
 	_ = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM constitution WHERE deleted_at IS NULL`).Scan(&st.Constitution)
 	_ = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM agents`).Scan(&st.Agents)
 	_ = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM memories WHERE deleted_at IS NULL`).Scan(&st.Memories)
 	st.Categories = countPairs(ctx, db, `SELECT COALESCE(mem_type,'(none)'), COUNT(*) FROM drawers
-		GROUP BY mem_type ORDER BY 2 DESC LIMIT 10`)
+		WHERE deleted_at IS NULL GROUP BY mem_type ORDER BY 2 DESC LIMIT 10`)
 	st.ConstitutionSources = countPairs(ctx, db, `SELECT source_file, COUNT(*) FROM constitution
 		WHERE deleted_at IS NULL GROUP BY source_file ORDER BY 2 DESC LIMIT 10`)
 	return st
