@@ -445,7 +445,7 @@ export ANTHROPIC_BASE_URL=http://127.0.0.1:2402   # or OPENAI_BASE_URL
 - ✅ **⚛️ Quantum Recall** — quantized semantic vector memory (8× compression, >99% recall, multilingual, CPU-only, sovereign)
 - ✅ **Sovereign OS** — bootable USB appliance (dm-verity + A/B + LUKS) · runs portable on any OS
 - ✅ **P2P mesh** — mDNS + WAN rendezvous + ed25519 signed gossip + 9-layer filter + karma
-- ✅ **Self-evolution** — gated autonomous loop: reflect → **adversarial council** (advocate ⚔ challenger → judge panel) → apply · behavior-layer additive + boot-rollback · 5-pillar governance · dreaming + self-authored skills · *continual (re)training next*
+- ✅ **Self-evolution** — gated autonomous loop: reflect → **guided proposer** (anti-collapse: rejects degenerate/over-represented ideas at the source) → **adversarial council** (advocate ⚔ challenger → judge panel) → apply · behavior-layer additive + boot-rollback · 5-pillar governance · dreaming + self-authored skills · *continual (re)training next*
 - ⏳ **Android** — a 24/7 node in your pocket
 - ⏳ **Continuity** — mesh-replicated brain ✅ + death-letters (incl. to a successor) ✅ shipped · dead-man's-switch + full heir succession next
 - 🌱 **Self-sustaining** — a wallet + economic flywheel (sponsors / hosted tier / bug bounties) so it funds its own compute

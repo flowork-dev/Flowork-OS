@@ -2,6 +2,9 @@
 // Owner: Aola Sahidin (Mr.Dev) · Locked 2026-06-16. Reason: R7 fase-2b LENGKAP (gate berlapis +
 // behavior-apply + core-apply handler + stage review + reflect-once + schedule auto-apply). Semua
 // VERIFIED E2E. Inti self-evolution agentmgr — store + gate + lifecycle; builder di-inject dari main.
+// Update 2026-06-16 (SGS Guide, inspirasi arxiv 2604.20209): proposer anti-COLLAPSE — usulan tema
+// over-represented (guideThemeCap) ditolak di SUMBER → cegah numpuk/degenerasi (fix akar, bukan
+// band-aid dedup/cap). pillar=relevansi + theme-cap=novelty (paper: guide cegah generator collapse).
 // Update 2026-06-16 (owner "autonomy penuh" + go-reviewer adversarial-pass): cap-by-'proposed' (karma
 // bisa matang) · EvolveBehaviorAutoApplyAllowed (gerbang behavior auto LEBIH RENDAH dari core; CORE git
 // TETEP EvolveAutoCommitAllowed ≥20) · EvolveScheduleAutoApply = DRAIN backlog (council→apply/reject/
@@ -636,6 +639,37 @@ func EvolveReflectHandler(propose EvolveProposer) http.HandlerFunc {
 // EvolveReflectOnce — INTI satu siklus refleksi (dipakai handler manual + scheduler terjadwal):
 // baca self-map → LLM usulin perbaikan additive → simpan backlog + karma. AMAN (nol ubah kode).
 // Balikin daftar proposal yg kesimpen. Decouple dari HTTP biar bisa dipanggil cron.
+// guideThemeCap — SGS GUIDE (anti-collapse, inspirasi arxiv 2604.20209 "Scaling Self-Play with
+// Self-Guidance"): maks usulan AKTIF per-TEMA sebelum proposer dianggap "collapse" (degenerate,
+// numpuk satu tema kayak reflection-*). Lebih dari ini → usulan ditolak GUIDE di SUMBER (proposer),
+// bukan band-aid dedup/cap. Paper: tanpa guide, generator hack-reward → collapse ke output gak guna;
+// guide nilai relevansi → cegah. Kita: pillar=relevansi, theme-cap=novelty/anti-degenerasi.
+const guideThemeCap = 2
+
+// evolveGuideTheme — ekstrak "tema" usulan buat deteksi collapse. NEW:<nama> → kata pertama nama
+// (reflection-scheduled & reflection-trigger → "reflection"). Path repo → nama file (lebih spesifik
+// dari prefix repo, biar core proposals beda-file gak salah-collapse).
+func evolveGuideTheme(targetFile, kind string) string {
+	t := strings.ToLower(strings.TrimSpace(targetFile))
+	if strings.HasPrefix(t, "new:") {
+		t = strings.TrimPrefix(t, "new:")
+		for _, sep := range []string{"-", "_", " ", ":"} {
+			if i := strings.Index(t, sep); i > 0 {
+				t = t[:i]
+			}
+		}
+		return t
+	}
+	if i := strings.LastIndexAny(t, "/"); i >= 0 {
+		t = t[i+1:]
+	}
+	t = strings.TrimSuffix(t, ".go")
+	if t == "" {
+		return strings.ToLower(strings.TrimSpace(kind))
+	}
+	return t
+}
+
 // evolveBacklogCap — batas usulan AKTIF (proposed/staged/approved) sebelum reflect berhenti
 // nambah (anti-numpuk + hemat token). ~1.5 halaman GUI (8/hal). Owner clear/Dewan kurangin → ngisi lagi.
 const evolveBacklogCap = 12
@@ -668,6 +702,12 @@ func EvolveReflectOnce(ctx context.Context, propose EvolveProposer, focus string
 		return nil, fmt.Errorf("propose: %w", perr)
 	}
 	saved := []map[string]any{}
+	// GUIDE (SGS anti-collapse): distribusi tema usulan AKTIF — proposer "collapse" kalau numpuk
+	// satu tema. existing = target_file usulan aktif (proposed/staged/approved).
+	themeCount := map[string]int{}
+	for tf := range existing {
+		themeCount[evolveGuideTheme(tf, "")]++
+	}
 	for _, d := range drafts {
 		if strings.TrimSpace(d.Rationale) == "" {
 			continue
@@ -690,7 +730,18 @@ func EvolveReflectOnce(ctx context.Context, propose EvolveProposer, focus string
 			p.Status = "rejected"
 			p.Rationale = "[NGELANTUR — gak masuk 5 pilar tujuan] " + p.Rationale
 		}
+		// SGS GUIDE (anti-collapse): tema over-represented = proposer degenerate/numpuk → tolak di
+		// SUMBER (bukan band-aid dedup/cap). pillar=relevansi, ini=novelty (lihat guideThemeCap).
+		gtheme := evolveGuideTheme(d.TargetFile, d.Kind)
+		if p.Status != "rejected" && gtheme != "" && themeCount[gtheme] >= guideThemeCap {
+			p.Status = "rejected"
+			p.Rationale = "[GUIDE — tema '" + gtheme + "' over-represented (anti-collapse SGS)] " + p.Rationale
+			_, _ = store.IncrementKarma("evolve_guide_reject", 1)
+		}
 		if err := store.AddEvolveProposal(p); err == nil {
+			if p.Status != "rejected" {
+				themeCount[gtheme]++ // tema diterima → naik (anti-collapse di batch yg sama)
+			}
 			if tf := strings.ToLower(strings.TrimSpace(p.TargetFile)); tf != "" {
 				existing[tf] = true // anti-dup dalam batch yang sama juga
 			}
