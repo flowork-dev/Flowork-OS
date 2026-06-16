@@ -67,13 +67,14 @@ const CSS = `
 .gr-in:focus, .gr-sel:focus, .gr-task:focus { outline:none; border-color:#a78bfa; }
 .gr-in::placeholder, .gr-task::placeholder { color:#64748b; }
 
-/* ── colony cards — masonry columns so uneven heights pack tightly (no ragged
-   rows). column-width is responsive: more columns on wider screens, 1 on mobile. */
-#grList { column-width:400px; column-gap:20px; }
-#grList > .gr-empty { column-span:all; }
+/* ── colony cards — responsive GRID (row-major: kartu mengalir kiri→kanan lalu turun,
+   kolom rapi sejajar). align-items:start = tiap kartu setinggi isinya, baris gak maksa
+   sama-tinggi. Lebih intuitif drpd column-masonry (yg ngurut kolom-dulu = bikin bingung). */
+#grList { display:grid; grid-template-columns:repeat(auto-fill, minmax(360px, 1fr)); gap:20px; align-items:start; }
+#grList > .gr-empty { grid-column:1 / -1; }
 .gr-card { background:rgba(15,23,42,0.6); border:1px solid rgba(148,163,184,0.18); border-radius:16px; padding:20px 22px;
   backdrop-filter:blur(4px); transition:border-color .18s, transform .18s, box-shadow .18s;
-  break-inside:avoid; margin-bottom:20px; }
+  min-width:0; }
 .gr-card:hover { border-color:rgba(167,139,250,0.5); transform:translateY(-2px); box-shadow:0 16px 40px -26px rgba(124,58,237,0.5); }
 
 .gr-head { display:flex; align-items:center; gap:13px; }
@@ -331,7 +332,7 @@ function card(g, avail, claimedBy, mainEl) {
         <option value="parallel" ${(g.mode || 'parallel') !== 'debate' ? 'selected' : ''}>${esc(L.mode_parallel || 'Parallel (fast)')}</option>
         <option value="debate" ${g.mode === 'debate' ? 'selected' : ''}>${esc(L.mode_debate || 'Debate (multi-round)')}</option>
       </select>
-      <input class="gr-in gr-rounds" type="number" min="2" max="4" style="width:130px" placeholder="${escAttr(L.rounds_ph || 'rounds (2-4)')}" value="${escAttr(g.debate_rounds || '')}">
+      <input class="gr-in gr-rounds" type="number" min="2" max="4" style="width:130px;${g.mode === 'debate' ? '' : 'display:none'}" placeholder="${escAttr(L.rounds_ph || 'rounds (2-4)')}" value="${escAttr(g.debate_rounds || '')}">
     </div>
 
     <div class="gr-foot">
@@ -364,6 +365,16 @@ function card(g, avail, claimedBy, mainEl) {
   });
   el.querySelectorAll('.gr-chip input').forEach((inp) =>
     inp.addEventListener('change', () => inp.closest('.gr-chip').classList.toggle('on', inp.checked)));
+
+  // Rounds input cuma relevan di mode DEBATE — show/hide pas mode berubah (parallel = no rounds,
+  // biar kotak "rounds" gak nyasar di samping dropdown pas mode parallel).
+  const modeSel = el.querySelector('.gr-mode');
+  const roundsIn = el.querySelector('.gr-rounds');
+  if (modeSel && roundsIn) {
+    modeSel.addEventListener('change', () => {
+      roundsIn.style.display = modeSel.value === 'debate' ? '' : 'none';
+    });
+  }
 
   el.querySelector('.gr-del').addEventListener('click', async () => {
     if (!confirm(fmt('delete_confirm', { name: g.display_name || g.id }))) return;
