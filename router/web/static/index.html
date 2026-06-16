@@ -397,6 +397,7 @@
         <button type="button" class="btn-secondary brain-subtab" data-sub="typed" onclick="brainSub('typed')"><span class="ic">🏷️</span> <span data-i18n="brain.sub.typed">Typed Memory</span></button>
         <button type="button" class="btn-secondary brain-subtab" data-sub="personas" onclick="brainSub('personas')"><span class="ic">🪪</span> <span data-i18n="brain.sub.personas">Personas</span></button>
         <button type="button" class="btn-secondary brain-subtab" data-sub="config" onclick="brainSub('config')"><span class="ic">⚙️</span> <span data-i18n="brain.sub.config">Config</span></button>
+        <button type="button" class="btn-secondary brain-subtab" data-sub="registry" onclick="brainSub('registry')"><span class="ic">🌐</span> <span data-i18n="brain.sub.registry">Registry</span></button>
       </div>
 
       <!-- OVERVIEW -->
@@ -480,6 +481,31 @@ done &lt; my_knowledge.jsonl</pre>
           <h3 class="font-semibold text-amber-300 mb-1" data-i18n="brain.con.amendTitle">Pending amendments — owner approval</h3>
           <p class="text-xs text-slate-500 mb-3" data-i18n="brain.con.amendHint">Governance-gated edits to existing sacred rules. Nothing applies until you approve.</p>
           <div id="brainAmendments" class="text-sm text-slate-400" data-i18n="brain.status.loading">Loading…</div>
+        </div>
+      </div>
+
+      <!-- REGISTRY (community skill registry: browse / pull / publish) -->
+      <div class="brain-sub hidden" data-sub="registry">
+        <div class="glass p-5 mb-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold text-purple-300" data-i18n="reg.title">Community Skill Registry</h3>
+            <button type="button" class="btn-secondary" onclick="loadRegistry()" data-i18n="reg.refresh">Refresh</button>
+          </div>
+          <p id="registryStatus" class="text-xs text-slate-400 mt-2" data-i18n="brain.status.loading">Loading…</p>
+        </div>
+        <div class="glass p-5 mb-4">
+          <h3 class="font-semibold text-purple-300 mb-1" data-i18n="reg.browseTitle">Browse — pull skills shared by the community</h3>
+          <p class="text-xs text-slate-500 mb-3" data-i18n="reg.browseHint">Each pull verifies the ed25519 signature + content gate before importing. The registry is untrusted.</p>
+          <div id="registryBrowse" class="text-sm text-slate-400" data-i18n="brain.status.loading">Loading…</div>
+        </div>
+        <div class="glass p-5">
+          <h3 class="font-semibold text-amber-300 mb-1" data-i18n="reg.publishTitle">Publish a local skill</h3>
+          <p class="text-xs text-slate-500 mb-3" data-i18n="reg.publishHint">Only skills proven locally (owner-endorsed or a positive track-record) can publish. Requires FLOWORK_GITHUB_TOKEN.</p>
+          <div class="flex items-center gap-3">
+            <input type="text" id="publishSkillName" class="px-3 py-2 rounded-md text-sm" data-i18n-ph="reg.namePh" placeholder="local skill name" />
+            <button type="button" class="btn-primary" onclick="publishSkill()" data-i18n="reg.publishBtn">Publish</button>
+            <span id="publishMsg" class="text-sm text-slate-400"></span>
+          </div>
         </div>
       </div>
 
@@ -2199,6 +2225,29 @@ done &lt; my_knowledge.jsonl</pre>
         "brain.amend.approved": "amendment applied",
         "brain.amend.rejected": "amendment rejected",
         "brain.amend.err": "amendment error",
+        // Brain — Community Skill Registry (P2 fase-2b)
+        "brain.sub.registry": "Registry",
+        "reg.title": "Community Skill Registry",
+        "reg.refresh": "Refresh",
+        "reg.repo": "Repo",
+        "reg.canPublish": "publish-ready (token set)",
+        "reg.noToken": "browse/pull only — set FLOWORK_GITHUB_TOKEN to publish",
+        "reg.browseTitle": "Browse — pull skills shared by the community",
+        "reg.browseHint": "Each pull verifies the ed25519 signature + content gate before importing. The registry is untrusted.",
+        "reg.empty": "registry is empty.",
+        "reg.pull": "pull",
+        "reg.pullTitle": "Pull skill from registry?",
+        "reg.pullBody": "Downloads, verifies signature + content, then imports locally (overwrites if it exists).",
+        "reg.pulled": "skill(s) imported",
+        "reg.publishTitle": "Publish a local skill",
+        "reg.publishHint": "Only skills proven locally (owner-endorsed or a positive track-record) can publish. Requires FLOWORK_GITHUB_TOKEN.",
+        "reg.publishBtn": "Publish",
+        "reg.namePh": "local skill name",
+        "reg.pubTitle": "Publish skill to registry?",
+        "reg.pubBody": "Signs + pushes this local skill to the public community registry (it must pass the karma-gate).",
+        "reg.published": "skill published",
+        "reg.nameReq": "skill name required",
+        "reg.err": "registry error",
         // Brain — Typed Memory
         "brain.typed.title": "Typed Memory",
         "brain.typed.empty": "no drawers of type",
@@ -2538,6 +2587,7 @@ done &lt; my_knowledge.jsonl</pre>
       if (name === 'constitution') { loadBrainConstitution(); loadBrainAmendments(); }
       if (name === 'typed') loadBrainTyped();
       if (name === 'personas') loadBrainPersonas();
+      if (name === 'registry') loadRegistry();
     }
     // Per-drawer + per-persona caches so edit/delete handlers can read full
     // content without re-fetching (typed_view + personas return everything).
@@ -2847,6 +2897,54 @@ done &lt; my_knowledge.jsonl</pre>
         loadBrainAmendments();
         loadBrainConstitution();
       } catch (e) { uiToast(t('brain.amend.err') + ': ' + e, 'error'); }
+    }
+    let _regSkills = [];
+    async function loadRegistry() {
+      try {
+        const st = await (await fetch('/api/skills/registry/status')).json();
+        const sEl = document.getElementById('registryStatus');
+        if (sEl) sEl.textContent = t('reg.repo') + ': ' + (st.repo || '?') + ' · ' + (st.can_publish ? t('reg.canPublish') : t('reg.noToken'));
+      } catch (e) { /* status best-effort */ }
+      const el = document.getElementById('registryBrowse');
+      if (!el) return;
+      el.textContent = t('brain.msg.loading');
+      try {
+        const r = await (await fetch('/api/skills/registry/browse')).json();
+        if (r.error) { el.textContent = t('reg.err') + ': ' + r.error; return; }
+        _regSkills = r.skills || [];
+        if (!_regSkills.length) { el.textContent = t('reg.empty'); return; }
+        // Name from registry is UNTRUSTED → display via _escHtml, pull via index (no inline name).
+        el.innerHTML = _regSkills.map((s, i) => '<div class="mb-2 p-2 rounded bg-black/20"><div class="flex items-center justify-between">'
+          + '<div class="text-xs text-purple-300">' + _escHtml(s.name || '') + ' <span class="text-slate-500">· ' + _escHtml(String(s.author_pubkey || '').slice(0, 12)) + '…</span></div>'
+          + '<button class="btn-secondary" style="padding:2px 8px;font-size:0.7rem" onclick="pullSkillIdx(' + i + ')" data-i18n="reg.pull">pull</button></div>'
+          + (s.description ? '<div class="text-xs text-slate-400 mt-1">' + _escHtml(s.description) + '</div>' : '') + '</div>').join('');
+        applyI18n(el);
+      } catch (e) { el.textContent = t('reg.err') + ': ' + e; }
+    }
+    function pullSkillIdx(i) { const s = _regSkills[i]; if (s && s.name) pullSkill(s.name); }
+    async function pullSkill(name) {
+      if (!await uiConfirm({ title: t('reg.pullTitle'), body: t('reg.pullBody') + '\n\n· ' + name })) return;
+      try {
+        const r = await fetch('/api/skills/registry/pull?name=' + encodeURIComponent(name) + '&overwrite=1', { method: 'POST' });
+        const j = await r.json();
+        if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
+        uiToast(t('reg.pulled') + ': ' + (j.imported || 0), 'success');
+      } catch (e) { uiToast(t('reg.err') + ': ' + e, 'error'); }
+    }
+    async function publishSkill() {
+      const inp = document.getElementById('publishSkillName');
+      const name = (inp ? inp.value : '').trim();
+      const msg = document.getElementById('publishMsg');
+      if (!name) { if (msg) { msg.textContent = t('reg.nameReq'); msg.className = 'text-sm text-amber-400'; } return; }
+      if (!await uiConfirm({ title: t('reg.pubTitle'), body: t('reg.pubBody') + '\n\n· ' + name })) return;
+      try {
+        const r = await fetch('/api/skills/registry/publish?skill=' + encodeURIComponent(name), { method: 'POST', headers: { 'X-Voter-ID': 'owner-gui' } });
+        const j = await r.json();
+        if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
+        if (msg) { msg.textContent = '✓ ' + t('reg.published'); msg.className = 'text-sm text-green-400'; }
+        uiToast(t('reg.published') + ': ' + name, 'success');
+        loadRegistry();
+      } catch (e) { if (msg) { msg.textContent = t('reg.err') + ': ' + e; msg.className = 'text-sm text-red-400'; } uiToast(t('reg.err') + ': ' + e, 'error'); }
     }
     async function loadBrain() {
       brainSub('overview');
