@@ -2,7 +2,8 @@
 // Status: STABLE — DO NOT MODIFY without owner approval.
 // Owner: Aola Sahidin (Mr.Dev)
 // Repo: https://github.com/flowork-os/Flowork-OS
-// Locked at: 2026-05-30
+// Locked at: 2026-05-30 · re-edit 2026-06-17 (owner-approved): count LIVE drawers only
+//   (deleted_at IS NULL) — report corpus retrievable beneran, bukan 5M (83% tombstoned). Re-LOCK.
 // Reason: Audit pass — Brain drawer/embedding/skills storage.
 
 package brain
@@ -43,12 +44,12 @@ func GetStats(ctx context.Context) Stats {
 	if err != nil {
 		return st
 	}
-	// Count ALL drawers (not just deleted_at IS NULL): the FTS index keeps every
-	// chunk regardless of the drawers tombstone, so RAG retrieval actually searches
-	// the full corpus. Report what the brain can really retrieve.
-	_ = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM drawers`).Scan(&st.Drawers)
+	// Count LIVE drawers only (deleted_at IS NULL): per 2026-06-17 retrieval (FTS +
+	// semantic) SKIP tombstoned, so report what the brain can REALLY retrieve — the
+	// live corpus — not the 5M total that's 83% soft-deleted.
+	_ = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM drawers WHERE deleted_at IS NULL`).Scan(&st.Drawers)
 	rows, err := db.QueryContext(ctx, `SELECT wing, COUNT(*) c FROM drawers
-		GROUP BY wing ORDER BY c DESC LIMIT 12`)
+		WHERE deleted_at IS NULL GROUP BY wing ORDER BY c DESC LIMIT 12`)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {

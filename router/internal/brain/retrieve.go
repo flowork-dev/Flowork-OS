@@ -2,7 +2,8 @@
 // Status: STABLE — DO NOT MODIFY without owner approval.
 // Owner: Aola Sahidin (Mr.Dev)
 // Repo: https://github.com/flowork-os/Flowork-OS
-// Locked at: 2026-05-30
+// Locked at: 2026-05-30 · re-edit 2026-06-17 (owner-approved): JOIN drawers filter
+//   deleted_at — drawer tombstoned (soft-delete) JANGAN di-retrieve (83% corpus). Re-LOCK.
 // Reason: Audit pass — Brain drawer/embeddings/skills.
 
 // Brain RAG retrieval (FTS5 BM25).
@@ -37,10 +38,11 @@ type RetrieveOpts struct {
 // Retrieve runs an FTS5 BM25 search over the Memory Palace and returns the
 // top-N most relevant drawers for RAG context injection. This is the L2 layer
 // of the cascade, exposed as multi-result for prompt enrichment.
-// Performance: queries memory_fts directly (content/wing/room live there — no
-// JOIN to the 5M-row drawers table) and uses AND-first matching, which on a
-// 30GB+ DB is ~10x faster than OR while returning the same top hits. If the
-// stricter AND match yields nothing, it falls back to OR for recall.
+// Performance: content/wing/room live in memory_fts (no JOIN needed for THOSE);
+// the only JOIN is a cheap PK existence-check on drawers.deleted_at (skip
+// tombstoned — 2026-06-17), applied AFTER the MATCH narrows to a small set.
+// AND-first matching on a 30GB+ DB is ~10x faster than OR while returning the
+// same top hits. If the stricter AND match yields nothing, falls back to OR.
 // BM25 returns lower scores for more relevant rows, so we invert to a positive
 // (0,1] relevance.
 func Retrieve(ctx context.Context, db *sql.DB, query string, opts RetrieveOpts) ([]Snippet, error) {
@@ -74,6 +76,10 @@ func runFTS(ctx context.Context, db *sql.DB, match string, wings []string, limit
 		rows *sql.Rows
 		err  error
 	)
+	// JOIN drawers buat filter deleted_at: drawer SOFT-DELETED (tombstone) JANGAN
+	// di-retrieve (owner 2026-06-17 — 83% corpus tombstoned bikin brain nyajiin data
+	// ke-hapus). JOIN = PK-lookup atas hasil MATCH (set kecil, AND-first) → murah,
+	// BUKAN scan 5M. FTS5 MATCH wajib nama-tabel PENUH (alias bikin MATCH gagal).
 	if len(wings) > 0 {
 		placeholders := ""
 		args := []any{match}
@@ -85,14 +91,16 @@ func runFTS(ctx context.Context, db *sql.DB, match string, wings []string, limit
 			args = append(args, w)
 		}
 		args = append(args, limit)
-		stmt := fmt.Sprintf(`SELECT drawer_id, wing, room, content, bm25(%s) AS score
-			FROM %s WHERE %s MATCH ? AND wing IN (%s)
-			ORDER BY score LIMIT ?`, ftsTable, ftsTable, ftsTable, placeholders)
+		stmt := fmt.Sprintf(`SELECT %[1]s.drawer_id, %[1]s.wing, %[1]s.room, %[1]s.content, bm25(%[1]s) AS score
+			FROM %[1]s JOIN drawers d ON d.id = %[1]s.drawer_id
+			WHERE %[1]s MATCH ? AND d.deleted_at IS NULL AND %[1]s.wing IN (%[2]s)
+			ORDER BY score LIMIT ?`, ftsTable, placeholders)
 		rows, err = db.QueryContext(ctx, stmt, args...)
 	} else {
-		stmt := fmt.Sprintf(`SELECT drawer_id, wing, room, content, bm25(%s) AS score
-			FROM %s WHERE %s MATCH ?
-			ORDER BY score LIMIT ?`, ftsTable, ftsTable, ftsTable)
+		stmt := fmt.Sprintf(`SELECT %[1]s.drawer_id, %[1]s.wing, %[1]s.room, %[1]s.content, bm25(%[1]s) AS score
+			FROM %[1]s JOIN drawers d ON d.id = %[1]s.drawer_id
+			WHERE %[1]s MATCH ? AND d.deleted_at IS NULL
+			ORDER BY score LIMIT ?`, ftsTable)
 		rows, err = db.QueryContext(ctx, stmt, match, limit)
 	}
 	if err != nil {

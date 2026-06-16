@@ -75,7 +75,9 @@ func main() {
 	var already int
 	_ = out.QueryRow(`SELECT COUNT(*) FROM drawer_vec_v2`).Scan(&already)
 	var total int
-	_ = src.QueryRow(`SELECT COUNT(*) FROM drawers WHERE length(content)>0`).Scan(&total)
+	// deleted_at IS NULL: skip drawer SOFT-DELETED (tombstone) — 2026-06-17. 83% corpus
+	// tombstoned → embed semua = 5x boros + index nyimpen data ke-hapus. Vektorin yg HIDUP doang.
+	_ = src.QueryRow(`SELECT COUNT(*) FROM drawers WHERE length(content)>0 AND deleted_at IS NULL`).Scan(&total)
 	log.Printf("brain=%s out=%s | total drawer(non-empty)=%d | udah=%d | resume dari rowid>%d",
 		brainPath, outPath, total, already, lastRowid)
 
@@ -89,7 +91,7 @@ func main() {
 			break
 		}
 		rows, err := src.Query(
-			`SELECT rowid, id, content FROM drawers WHERE rowid > ? AND length(content)>0 ORDER BY rowid LIMIT ?`,
+			`SELECT rowid, id, content FROM drawers WHERE rowid > ? AND length(content)>0 AND deleted_at IS NULL ORDER BY rowid LIMIT ?`,
 			lastRowid, page)
 		if err != nil {
 			log.Fatalf("query drawers: %v", err)

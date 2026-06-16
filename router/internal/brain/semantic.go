@@ -1,4 +1,6 @@
 // === LOCKED FILE (soft) === Status: STABLE — owner-approved 2026-06-16 (LOCKED ≠ FREEZE).
+// re-edit 2026-06-17 (owner-approved): vectorRetrieve filter deleted_at IS NULL + over-fetch selalu
+//   — drawer tombstoned JANGAN di-retrieve (paritas dgn FTS retrieve.go). Re-LOCK.
 // AI lain: JANGAN otak-atik tanpa izin owner. Teruji (TestSemanticLive: vector murni by-makna).
 //
 // semantic.go — #6 ARSITEK BARU: pencarian brain by-MAKNA (Quantum Recall, vector murni).
@@ -111,10 +113,10 @@ func vectorRetrieve(ctx context.Context, db *sql.DB, query string, limit, maxLen
 	if err != nil || len(qv) != idx.Dim() {
 		return nil
 	}
-	searchK := limit
-	if len(wings) > 0 {
-		searchK = limit * 6 // over-fetch: sebagian bakal kebuang filter wing
-	}
+	// over-fetch SELALU: sebagian hit bakal kebuang filter wing ATAU deleted_at
+	// (drawer tombstoned skip — 2026-06-17). Index live-only abis re-embed-fix, tapi
+	// over-fetch jaga transisi (index lama bisa masih punya tombstoned).
+	searchK := limit * 6
 	hits := idx.Search(qv, searchK)
 	if len(hits) == 0 {
 		return nil
@@ -125,7 +127,8 @@ func vectorRetrieve(ctx context.Context, db *sql.DB, query string, limit, maxLen
 		ph[i] = "?"
 		args = append(args, h.ID)
 	}
-	q := "SELECT id, wing, room, content FROM drawers WHERE id IN (" + strings.Join(ph, ",") + ")"
+	// deleted_at IS NULL: drawer SOFT-DELETED JANGAN di-retrieve (paritas dgn FTS).
+	q := "SELECT id, wing, room, content FROM drawers WHERE id IN (" + strings.Join(ph, ",") + ") AND deleted_at IS NULL"
 	if len(wings) > 0 {
 		wp := make([]string, len(wings))
 		for i, w := range wings {
