@@ -155,7 +155,10 @@ func capabilityMeetsBar() (bool, string) {
 // Dipanggil on-demand dari /api/evolve/eval (tombol GUI), bukan tiap status-poll.
 func evolveEvalAndCache() capResult {
 	model := coderModel("")
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	// 300s (was 120s, owner-approved 2026-06-16): suite = 3 tugas SEKUENSIAL (tiap tugas = 1 LLM-call
+	// 1200-token + compile `go run` sampai 25s). 120s total kependekan → tugas ke-3 SELALU ke-cut →
+	// max 2/3 → floor MUSTAHIL lolos, model sekuat apapun (Opus pun cuma 2/3). 300s kasih ~100s/tugas.
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancel()
 	r := runCapabilityEval(ctx, model)
 	capCache.Store(model, r)
