@@ -102,13 +102,27 @@ export async function render(container) {
   // kinds (fix/refactor/doc/test) = needs DEV core-apply (Milestone B), shown as a note.
   const BEHAVIOR_KINDS = new Set(['add-agent', 'add-skill', 'add-app']);
 
+  let allProposals = [];
+  let propPage = 0;
+  const PROP_PER_PAGE = 8;
+
   async function loadProposals() {
     try {
-      const d = await (await fetch('/api/evolve/proposals?limit=30')).json();
-      const items = d.items || [];
-      if (!items.length) { propEl.innerHTML = `<div style="color:#64748b">${esc(L.noProposals)}</div>`; return; }
-      const riskColor = { low: '#4ade80', medium: '#fbbf24', high: '#f87171' };
-      propEl.innerHTML = items.map((p) => {
+      const d = await (await fetch('/api/evolve/proposals?limit=200')).json();
+      allProposals = d.items || [];
+      propPage = 0;
+      renderProposals();
+    } catch (e) { propEl.innerHTML = `<span style="color:#f87171">❌ ${esc(e.message)}</span>`; }
+  }
+
+  function renderProposals() {
+    const items = allProposals;
+    if (!items.length) { propEl.innerHTML = `<div style="color:#64748b">${esc(L.noProposals)}</div>`; return; }
+    const pages = Math.ceil(items.length / PROP_PER_PAGE);
+    if (propPage >= pages) propPage = pages - 1;
+    if (propPage < 0) propPage = 0;
+    const riskColor = { low: '#4ade80', medium: '#fbbf24', high: '#f87171' };
+    const cards = items.slice(propPage * PROP_PER_PAGE, (propPage + 1) * PROP_PER_PAGE).map((p) => {
         const kind = (p.kind || '').toLowerCase();
         const canApply = BEHAVIOR_KINDS.has(kind) && p.status !== 'applied' && p.status !== 'rejected';
         let footer = '';
@@ -128,10 +142,20 @@ export async function render(container) {
             <span style="margin-left:auto;color:#475569;font-size:0.7rem">${esc(p.status || '')}</span>
           </div>
           <div style="font-size:0.84rem;color:#cbd5e1;margin-bottom:8px">${esc(p.rationale || '')}</div>
-          <div style="display:flex;justify-content:flex-end">${footer}</div>
+          <div data-verdict="${esc(p.id)}" style="display:none;font-size:0.78rem;color:#c4b5fd;background:#1e1b3a;border-radius:6px;padding:8px 10px;margin-bottom:8px"></div>
+          <div style="display:flex;justify-content:flex-end;gap:6px;align-items:center">
+            ${footer}
+            ${p.status !== 'applied' ? `<button data-council-id="${esc(p.id)}" title="Sidang dewan adversarial (Pembela/Penantang/Hakim panel-3)" style="background:#6d28d9;color:#fff;border:0;border-radius:6px;padding:5px 11px;cursor:pointer;font-size:0.76rem">🏛️ Dewan</button>` : ''}
+            <button data-del-id="${esc(p.id)}" title="Hapus usulan" style="background:#3f1d1d;color:#f87171;border:1px solid #7f1d1d;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:0.76rem">🗑️</button>
+          </div>
         </div>`;
-      }).join('');
-    } catch (e) { propEl.innerHTML = `<span style="color:#f87171">❌ ${esc(e.message)}</span>`; }
+    }).join('');
+    const pager = pages > 1 ? `<div style="display:flex;justify-content:center;gap:12px;align-items:center;margin-top:6px">
+      <button data-prop-prev ${propPage === 0 ? 'disabled' : ''} style="background:#1e293b;color:#cbd5e1;border:0;border-radius:6px;padding:5px 13px;cursor:${propPage === 0 ? 'default' : 'pointer'};font-size:0.78rem;${propPage === 0 ? 'opacity:0.4' : ''}">‹ Prev</button>
+      <span style="color:#94a3b8;font-size:0.78rem">Hal ${propPage + 1}/${pages} · ${items.length} usulan</span>
+      <button data-prop-next ${propPage >= pages - 1 ? 'disabled' : ''} style="background:#1e293b;color:#cbd5e1;border:0;border-radius:6px;padding:5px 13px;cursor:${propPage >= pages - 1 ? 'default' : 'pointer'};font-size:0.78rem;${propPage >= pages - 1 ? 'opacity:0.4' : ''}">Next ›</button>
+    </div>` : '';
+    propEl.innerHTML = cards + pager;
   }
 
   // Apply a behavior-layer proposal — build it for real (gated server-side by saklar+model).
@@ -151,10 +175,56 @@ export async function render(container) {
     }
   }
 
-  // Delegated: Apply buttons are re-rendered each loadProposals(), so listen on the parent once.
+  // A1 DEWAN: sidang adversarial (Pembela/Penantang/Hakim) atas 1 usulan → verdict + update status.
+  async function councilProposal(id, btn) {
+    const orig = btn.textContent;
+    btn.disabled = true; btn.textContent = '⏳ sidang…';
+    const vEl = propEl.querySelector(`[data-verdict="${id}"]`);
+    try {
+      const r = await fetch('/api/evolve/council?id=' + encodeURIComponent(id), { method: 'POST' });
+      const d = await r.json();
+      if (d.error) throw new Error(d.error);
+      const v = d.verdict || {};
+      const icon = { approve: '✅', stage: '🟡', reject: '⛔' }[v.decision] || '⚖️';
+      if (vEl) {
+        const judges = (v.judges || []).map((j, i) => `H${i + 1}:${(j.decision || '').toUpperCase()}(${j.score})`).join(' · ');
+        vEl.style.display = 'block';
+        vEl.innerHTML = `<b>${icon} KEPUTUSAN: ${(v.decision || '').toUpperCase()}</b> — ${esc(v.reasoning || '')}<br>`
+          + `<span style="color:#86efac">🟢 ${esc((v.pembela || '').slice(0, 200))}</span><br>`
+          + `<span style="color:#fca5a5">🔴 ${v.penantang_veto ? '[VETO] ' : ''}${esc((v.penantang || '').slice(0, 200))}</span><br>`
+          + `<span style="color:#a5b4fc">⚖️ ${esc(judges)}</span>`;
+      }
+      // update status lokal (badge nyusul pas refresh) + biarin verdict kelihatan (gak re-render).
+      const p = allProposals.find((x) => x.id === id);
+      if (p) p.status = v.decision === 'approve' ? 'approved' : (v.decision === 'reject' ? 'rejected' : 'staged');
+      btn.disabled = false; btn.textContent = orig;
+      await loadConfig();
+    } catch (e) {
+      alert('Dewan gagal: ' + e.message);
+      btn.disabled = false; btn.textContent = orig;
+    }
+  }
+
+  // Hapus 1 usulan (owner buang dari backlog) — buang lokal + re-render (jaga halaman).
+  async function deleteProposal(id, btn) {
+    if (!confirm('Hapus usulan ini?')) return;
+    btn.disabled = true;
+    try {
+      const r = await fetch('/api/evolve/proposal/delete?id=' + encodeURIComponent(id), { method: 'POST' });
+      const d = await r.json();
+      if (d.error) throw new Error(d.error);
+      allProposals = allProposals.filter((x) => x.id !== id);
+      renderProposals();
+    } catch (e) { alert('Hapus gagal: ' + e.message); btn.disabled = false; }
+  }
+
+  // Delegated: tombol di-render ulang tiap render, jadi listen di parent sekali.
   propEl.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-apply-id]');
-    if (b) applyProposal(b.getAttribute('data-apply-id'), b);
+    if (e.target.closest('[data-prop-prev]')) { propPage--; renderProposals(); return; }
+    if (e.target.closest('[data-prop-next]')) { propPage++; renderProposals(); return; }
+    const ap = e.target.closest('[data-apply-id]'); if (ap) return applyProposal(ap.getAttribute('data-apply-id'), ap);
+    const co = e.target.closest('[data-council-id]'); if (co) return councilProposal(co.getAttribute('data-council-id'), co);
+    const dl = e.target.closest('[data-del-id]'); if (dl) return deleteProposal(dl.getAttribute('data-del-id'), dl);
   });
 
   // ── STAGE review (Milestone C): perubahan core ter-stage (dev) → Approve(commit)/Reject ──

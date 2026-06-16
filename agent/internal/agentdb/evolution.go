@@ -8,6 +8,7 @@ package agentdb
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -122,6 +123,50 @@ func (s *Store) SetEvolveProposalStatus(id, status string) error {
 	}
 	_, err := s.db.Exec(`UPDATE evolve_proposal SET status=? WHERE id=?`, status, id)
 	return err
+}
+
+// DeleteEvolveProposal — hapus 1 usulan by id (owner buang dari backlog). Idempoten.
+func (s *Store) DeleteEvolveProposal(id string) error {
+	if err := s.ensureEvolveSchema(); err != nil {
+		return err
+	}
+	_, err := s.db.Exec(`DELETE FROM evolve_proposal WHERE id=?`, id)
+	return err
+}
+
+// DeleteEvolveProposalsByStatus — hapus semua usulan berstatus tertentu (mis. "rejected"
+// buat bersih-bersih). Balik jumlah yg kehapus.
+func (s *Store) DeleteEvolveProposalsByStatus(status string) (int64, error) {
+	if err := s.ensureEvolveSchema(); err != nil {
+		return 0, err
+	}
+	res, err := s.db.Exec(`DELETE FROM evolve_proposal WHERE status=?`, status)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	return n, nil
+}
+
+// ActiveProposalTargets — set target_file usulan AKTIF (proposed|staged|approved) buat DEDUP
+// di reflect (jangan bikin lagi yang udah ada). Map target_file→true.
+func (s *Store) ActiveProposalTargets() (map[string]bool, error) {
+	out := map[string]bool{}
+	if err := s.ensureEvolveSchema(); err != nil {
+		return out, err
+	}
+	rows, err := s.db.Query(`SELECT target_file FROM evolve_proposal WHERE status IN ('proposed','staged','approved') AND target_file != ''`)
+	if err != nil {
+		return out, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var tf string
+		if rows.Scan(&tf) == nil {
+			out[strings.ToLower(strings.TrimSpace(tf))] = true
+		}
+	}
+	return out, rows.Err()
 }
 
 // ListEvolveProposals — backlog terbaru dulu (buat GUI + eksekusi fase-2).

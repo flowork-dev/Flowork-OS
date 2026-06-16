@@ -74,7 +74,7 @@ func runEvolveScheduledCycle(host *kernelhost.Host, fdb *floworkdb.Store, groups
 	}
 	out := map[string]any{"ok": true, "reflected": len(saved), "proposals": saved}
 	// mode=auto → auto-apply behavior (gated internal; return kosong kalau belum auto).
-	applied := agentmgr.EvolveScheduleAutoApply(evolveGateDeps(), evolveApplier(host, fdb, groups), saved)
+	applied := agentmgr.EvolveScheduleAutoApply(evolveGateDeps(), evolveApplier(host, fdb, groups), evolveCouncilJudge(), saved)
 	if len(applied) > 0 {
 		out["auto_applied"] = applied
 	}

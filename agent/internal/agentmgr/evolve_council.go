@@ -94,3 +94,37 @@ func EvolveCouncilHandler(judge CouncilJudge) http.HandlerFunc {
 		httpx.WriteJSON(w, map[string]any{"proposal_id": id, "verdict": v})
 	}
 }
+
+// EvolveProposalDeleteHandler — POST /api/evolve/proposal/delete?id=<id> (hapus 1 usulan) ATAU
+// ?status=<status> (hapus SEMUA berstatus itu, mis. ?status=rejected buat bersih-bersih). Owner-gated.
+func EvolveProposalDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		httpx.WriteJSON(w, map[string]any{"error": "POST only"})
+		return
+	}
+	store, err := openAgentStore(defaultAgentID)
+	if err != nil {
+		httpx.WriteJSON(w, map[string]any{"error": "open store: " + err.Error()})
+		return
+	}
+	defer store.Close()
+	id := strings.TrimSpace(r.URL.Query().Get("id"))
+	status := strings.TrimSpace(r.URL.Query().Get("status"))
+	switch {
+	case id != "":
+		if e := store.DeleteEvolveProposal(id); e != nil {
+			httpx.WriteJSON(w, map[string]any{"error": e.Error()})
+			return
+		}
+		httpx.WriteJSON(w, map[string]any{"ok": true, "deleted": id})
+	case status != "":
+		n, e := store.DeleteEvolveProposalsByStatus(status)
+		if e != nil {
+			httpx.WriteJSON(w, map[string]any{"error": e.Error()})
+			return
+		}
+		httpx.WriteJSON(w, map[string]any{"ok": true, "deleted_count": n, "status": status})
+	default:
+		httpx.WriteJSON(w, map[string]any{"error": "id atau status wajib"})
+	}
+}

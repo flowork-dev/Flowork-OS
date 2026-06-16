@@ -611,9 +611,14 @@ func EvolveReflectOnce(ctx context.Context, propose EvolveProposer, focus string
 		_, _ = store.IncrementKarma("evolve_reflect_fail", 1)
 		return nil, fmt.Errorf("propose: %w", perr)
 	}
+	existing, _ := store.ActiveProposalTargets() // DEDUP: target usulan aktif (proposed/staged/approved)
 	saved := []map[string]any{}
 	for _, d := range drafts {
 		if strings.TrimSpace(d.Rationale) == "" {
+			continue
+		}
+		// DEDUP: jangan bikin LAGI usulan yang target_file-nya udah ada di backlog aktif (anti-numpuk).
+		if tf := strings.ToLower(strings.TrimSpace(d.TargetFile)); tf != "" && existing[tf] {
 			continue
 		}
 		p := agentdb.EvolveProposal{
@@ -631,6 +636,9 @@ func EvolveReflectOnce(ctx context.Context, propose EvolveProposer, focus string
 			p.Rationale = "[NGELANTUR — gak masuk 5 pilar tujuan] " + p.Rationale
 		}
 		if err := store.AddEvolveProposal(p); err == nil {
+			if tf := strings.ToLower(strings.TrimSpace(p.TargetFile)); tf != "" {
+				existing[tf] = true // anti-dup dalam batch yang sama juga
+			}
 			saved = append(saved, map[string]any{
 				"id": p.ID, "target_file": p.TargetFile, "kind": p.Kind,
 				"rationale": p.Rationale, "risk": p.Risk, "pillar": p.Pillar, "status": p.Status,
@@ -646,7 +654,7 @@ func EvolveReflectOnce(ctx context.Context, propose EvolveProposer, focus string
 // direfleksi terjadwal, KALAU gate auto lolos (mode=auto+karma+model). Dipanggil scheduler.
 // Core proposals di-SKIP (di-stage/review owner — terlalu deliberate buat auto-cron). AMAN:
 // additive ke ~/.flowork, reversible. Gate dicek di sini (return kosong kalau belum auto).
-func EvolveScheduleAutoApply(dep EvolveGateDeps, apply EvolveApplier, proposals []map[string]any) []map[string]any {
+func EvolveScheduleAutoApply(dep EvolveGateDeps, apply EvolveApplier, judge CouncilJudge, proposals []map[string]any) []map[string]any {
 	results := []map[string]any{}
 	if apply == nil {
 		return results
@@ -673,6 +681,29 @@ func EvolveScheduleAutoApply(dep EvolveGateDeps, apply EvolveApplier, proposals 
 		p, found, gerr := store.GetEvolveProposal(id)
 		if gerr != nil || !found || p.Status != "proposed" {
 			continue
+		}
+		// A1 DEWAN ADVERSARIAL (gerbang otomatis): sebelum auto-commit, proposal WAJIB lolos dewan
+		// (Pembela/Penantang/Hakim). Cuma "approve" yang auto-apply; "stage" → review owner; "reject" → buang.
+		if judge != nil {
+			jctx, jcancel := context.WithTimeout(context.Background(), 290*time.Second)
+			v, jerr := judge(jctx, p)
+			jcancel()
+			if jerr != nil {
+				results = append(results, map[string]any{"id": id, "council_error": jerr.Error()})
+				continue
+			}
+			switch v.Decision {
+			case "approve":
+				_ = store.SetEvolveProposalStatus(id, "approved") // lanjut auto-apply di bawah
+			case "stage":
+				_ = store.SetEvolveProposalStatus(id, "staged")
+				results = append(results, map[string]any{"id": id, "council": "stage", "reason": v.Reasoning})
+				continue
+			default: // reject
+				_ = store.SetEvolveProposalStatus(id, "rejected")
+				results = append(results, map[string]any{"id": id, "council": "reject", "reason": v.Reasoning})
+				continue
+			}
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 290*time.Second)
 		res, aerr := apply(ctx, p)
