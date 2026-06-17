@@ -5,7 +5,12 @@
 /os/out/
 /os/.work/
 /desktop/bin/
-/os/builder/flowork-creator
+# Local dev-only OS Creator + secret-baking distributable pipeline. Removed from the
+# PUBLIC repo on purpose (commit 95d204d) — these bake owner state/tokens, so they must
+# stay LOCAL and never be pushed. Owner uses them from their own machine.
+/os/builder/
+/os/build/make-distributable.sh
+/os/build/sanitize-public.py
 /os/flasher/flowork-usb-maker
 /os/mesh-rendezvous/flowork-rendezvous-*
 /agent/flowork-gui
