@@ -19,13 +19,18 @@ say "stage-1 init (squashfs-root)"
 # The CD/ISO on a q35 machine hangs off the SATA/AHCI controller, so libata+ahci are
 # essential to see /dev/sr0; ata_piix covers older IDE; virtio_* for disk-attached media.
 for m in scsi_mod sd_mod sr_mod cdrom libata ata_piix ahci \
+         usb-common usbcore xhci-pci xhci-hcd ehci-pci ehci-hcd ohci-pci ohci-hcd uhci-hcd \
+         usb-storage uas usbhid hid \
          virtio virtio_pci virtio_blk virtio_scsi \
          crc32c_generic crc32c-intel libcrc32c crc32_generic jbd2 mbcache \
          isofs loop squashfs overlay ext4 vfat nls_cp437 nls_iso8859_1; do
 	modprobe "$m" 2>/dev/null
 done
 mdev -s 2>/dev/null
-sleep 2
+# USB mass-storage + the USB host controllers (xhci/ehci/ohci/uhci) enumerate ASYNChronously
+# after their modules load. On a REAL machine booting off a USB stick this can take a couple of
+# seconds longer than a virtio disk in QEMU — give it time so /dev/sd* appears before we scan.
+sleep 4
 say "blockdevs: $(ls -d /dev/sr* /dev/sd* /dev/vd* 2>/dev/null | tr '\n' ' ')"
 
 # Find the boot media: holds flowork/active (A/B) or flowork/rootfs.squashfs (single slot).
