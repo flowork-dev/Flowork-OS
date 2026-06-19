@@ -58,6 +58,9 @@ func Init() {
 	tools.Register(&brainAddTool{})
 	tools.Register(&brainSearchLocalTool{})
 	tools.Register(&brainGetTool{})
+	// CGM: recall grounding dari cognitive graph lokal (cognitive_tools.go). Owner
+	// autonomy grant 2026-06-19 (LOCKED file, additive 1 line — register tool baru).
+	tools.Register(&graphRecallTool{})
 	// Roadmap 2 B2: recall mistakes pas konteks mirip (mistakes_recall.go).
 	tools.Register(&mistakeRecallTool{})
 	// Roadmap 2 B4: suggest skill dari pola tool sukses (skill_suggest.go).
