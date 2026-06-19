@@ -801,6 +801,11 @@ func main() {
 	mux.HandleFunc("/api/agents/watchdog/alerts", agentmgr.WatchdogAlertsHandler)
 	mux.HandleFunc("/api/agents/codemap/index", agentmgr.CodemapIndexHandler)
 	mux.HandleFunc("/api/agents/codemap/nodes", agentmgr.CodemapNodesHandler)
+	// CGM (Cognitive Graph Memory) read API — additive, plug-and-play (roadmap_opus8.md
+	// Phase 3 §4.9). Owner-approved edit to this LOCKED file (autonomy grant 2026-06-19):
+	// reason = wire 2 read-only handlers for the new Cognitive Graph GUI tab.
+	mux.HandleFunc("/api/agents/cognitive/graph", agentmgr.CognitiveGraphHandler)
+	mux.HandleFunc("/api/agents/cognitive/tensions", agentmgr.CognitiveTensionsHandler)
 	mux.HandleFunc("/api/agents/zombie/findings", agentmgr.ZombieFindingsHandler)
 	mux.HandleFunc("/api/agents/zombie/ack", agentmgr.ZombieAckHandler)
 	mux.HandleFunc("/api/agents/zombie/scan", agentmgr.ZombieScanHandler)

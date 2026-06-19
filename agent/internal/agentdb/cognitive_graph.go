@@ -302,6 +302,76 @@ func (s *Store) Neighbors(id string) (out []CogEdge, in []CogEdge, err error) {
 	return out, in, nil
 }
 
+// GraphNodeView / GraphEdgeView — payload ringan buat GUI (tanpa embedding).
+type GraphNodeView struct {
+	ID         string  `json:"id"`
+	Label      string  `json:"label"`
+	Type       string  `json:"type"`
+	Status     string  `json:"status"`
+	Confidence float64 `json:"confidence"`
+	HitCount   int     `json:"hit_count"`
+}
+
+type GraphEdgeView struct {
+	FromID       string  `json:"from_id"`
+	ToID         string  `json:"to_id"`
+	RelationType string  `json:"relation_type"`
+	Status       string  `json:"status"`
+	Strength     float64 `json:"strength"`
+}
+
+// ListCogNodes — semua node (buat viz graph). limit default 500.
+func (s *Store) ListCogNodes(limit int) ([]GraphNodeView, error) {
+	if limit <= 0 || limit > 5000 {
+		limit = 500
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.ensureCognitiveGraphSchema()
+	rows, err := s.db.Query(
+		`SELECT id, label, type, status, confidence, hit_count FROM cognitive_nodes
+		 ORDER BY hit_count DESC, last_seen_at DESC LIMIT ?`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []GraphNodeView
+	for rows.Next() {
+		var n GraphNodeView
+		if err := rows.Scan(&n.ID, &n.Label, &n.Type, &n.Status, &n.Confidence, &n.HitCount); err != nil {
+			return nil, err
+		}
+		out = append(out, n)
+	}
+	return out, rows.Err()
+}
+
+// ListCogEdges — semua edge (buat viz graph). limit default 1000.
+func (s *Store) ListCogEdges(limit int) ([]GraphEdgeView, error) {
+	if limit <= 0 || limit > 10000 {
+		limit = 1000
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.ensureCognitiveGraphSchema()
+	rows, err := s.db.Query(
+		`SELECT from_id, to_id, relation_type, status, strength FROM cognitive_edges
+		 ORDER BY strength DESC LIMIT ?`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []GraphEdgeView
+	for rows.Next() {
+		var e GraphEdgeView
+		if err := rows.Scan(&e.FromID, &e.ToID, &e.RelationType, &e.Status, &e.Strength); err != nil {
+			return nil, err
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
 // CountCognitiveGraph — jumlah node + edge live (buat stats/QC).
 func (s *Store) CountCognitiveGraph() (nodes int, edges int) {
 	s.mu.Lock()
