@@ -1,3 +1,11 @@
+// === LOCKED FILE ===
+// Status: STABLE — DO NOT MODIFY without owner approval (autonomy grant 2026-06-19).
+// Owner: Aola Sahidin (Mr.Dev)
+// Repo: https://github.com/flowork-os/Flowork-OS
+// Locked at: 2026-06-20
+// Reason: CGM router chat-completion helper (LLMFunc source) — built + used live in
+//   P1 prove-loop + re-distil batch (685 instinct). Extend = new file, jangan modify ini.
+//
 // chat.go — agent → router chat-completion helper (CGM digestion extractor source).
 //
 // File BARU (routerclient.go locked). Reuse Client (BaseURL whitelisted, HTTP).

@@ -1,3 +1,12 @@
+// === LOCKED FILE ===
+// Status: STABLE — DO NOT MODIFY without owner approval (autonomy grant 2026-06-19).
+// Owner: Aola Sahidin (Mr.Dev)
+// Repo: https://github.com/flowork-os/Flowork-OS
+// Locked at: 2026-06-20
+// Reason: CGM instinct_recall tool (coding/security instinct before coding) — built+vet
+//   green, registered via init(). Extend = new file, jangan modify ini.
+//   (Catatan: room-scoped retrieval tuning = perbaikan ROUTER endpoint, bukan file ini.)
+//
 // instinct_recall.go — Phase 3B (§4.10, D7): retrieve coding/security INSTINCT
 // sebelum agent nulis code. File BARU (register via init(), pola agent_run.go —
 // JANGAN modify builtins.go locked).

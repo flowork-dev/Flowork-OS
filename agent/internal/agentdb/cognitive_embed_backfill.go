@@ -1,3 +1,11 @@
+// === LOCKED FILE ===
+// Status: STABLE — DO NOT MODIFY without owner approval (autonomy grant 2026-06-19).
+// Owner: Aola Sahidin (Mr.Dev)
+// Repo: https://github.com/flowork-os/Flowork-OS
+// Locked at: 2026-06-20
+// Reason: CGM embedding backfill (NodesNeedingEmbedding + SetNodeEmbedding) — built +
+//   unit-tested, verified live (174 awareness nodes embedded). Extend = new file.
+//
 // cognitive_embed_backfill.go — Phase 3C: backfill embedding ke node yg dibikin
 // struktural tanpa embedding (tool/agent/code awareness nodes). File BARU
 // (cognitive_graph.go locked). Embed-nya di-INJECT dari caller (agentdb gak import

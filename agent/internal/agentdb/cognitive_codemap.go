@@ -1,3 +1,11 @@
+// === LOCKED FILE ===
+// Status: STABLE — DO NOT MODIFY without owner approval (autonomy grant 2026-06-19).
+// Owner: Aola Sahidin (Mr.Dev)
+// Repo: https://github.com/flowork-os/Flowork-OS
+// Locked at: 2026-06-20
+// Reason: CGM codemap→graph bridge (LinkCodemapToGraph) — built + unit-tested, verified
+//   live (346 nodes/599 edges mr-flow). Extend = new file (mis. semantic concept→code).
+//
 // cognitive_codemap.go — Phase 3C/D14/D15: jembatan CODEMAP → COGNITIVE GRAPH.
 //
 // File BARU (cognitive_graph.go locked — extend, jangan modify). Bikin Flowork

@@ -1,3 +1,11 @@
+// === LOCKED FILE ===
+// Status: STABLE — DO NOT MODIFY without owner approval (autonomy grant 2026-06-19).
+// Owner: Aola Sahidin (Mr.Dev)
+// Repo: https://github.com/flowork-os/Flowork-OS
+// Locked at: 2026-06-20
+// Reason: CGM digestion wiring (LLM+Embed closures → DigestPendingInteractions, cron
+//   hook + manual endpoint, env-gated) — built+tested, deployed P1. Extend = new file.
+//
 // cognitive_digest_cron.go — CGM digestion wiring (NON-beku, file baru).
 //
 // Deploy loop yg udah TERBUKTI di P1 (prove-loop harness, 2026-06-20): nyolokin
