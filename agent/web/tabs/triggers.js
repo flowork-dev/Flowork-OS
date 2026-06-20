@@ -1,3 +1,6 @@
+// === LOCKED FILE (soft) === Status: STABLE — owner-approved 2026-06-20 (+ target system:compact-all).
+// LOCKED ≠ FREEZE (boleh diedit dgn izin owner).
+//
 // triggers.js — tab "Trigger" (ROADMAP 3): otomasi event→aksi, ala Google Tag Manager.
 // KALAU <event> MAKA suruh <agent/group> dgn <prompt {{payload}}> → kirim Telegram.
 // Tema Matrix × Jarvis. Semua label lewat i18n (dictionary), no hardcode.

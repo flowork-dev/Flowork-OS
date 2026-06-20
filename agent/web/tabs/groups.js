@@ -1,3 +1,7 @@
+// === LOCKED FILE (soft) === Status: STABLE — QC-verified SEMUA kontrol 2026-06-20 (owner-approved):
+// BUILD TEAM, DEPLOY/create, Restore, ON/OFF toggle (cascade), SAVE ROSTER (members/synthesizer/
+// task/mode/rounds persist), DELETE, CHAT, dropdown mode→rounds. Ga ada kabel putus. LOCKED ≠ FREEZE.
+//
 // groups.js — tab "Group": the ant colony.
 //
 // A GROUP is a team of small single-job agents + a synthesizer that fuses their
