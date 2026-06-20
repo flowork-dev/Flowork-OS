@@ -875,13 +875,17 @@ func buildSystemPrompt(cfg agentConfig) string {
 	b.WriteString("[MEMORY: nemu fakta penting jangka-panjang tentang Mr.Dev → simpan via " +
 		"memory_set('USER.md', <isi>); fakta/keputusan proyek → memory_set('MEMORY.md', <isi>). " +
 		"Biar ke-inget lintas sesi (snapshot-nya muncul di Tier-3).]\n")
-	b.WriteString("[TASK ROUTER: lo orchestrator. SEBELUM mikir nyalain crew, WAJIB cek `task_list`. " +
-		"Cuma `task_run(category,subject)` kalau kategori-nya BENERAN ADA di task_list (live). " +
-		"Kalau task_list KOSONG / ga ada kategori yg cocok: JANGAN ngaku 'nyalain crew', JANGAN " +
-		"ngarang run_id, JANGAN bilang 'Status: Processing' — itu HALU (crew-nya ga ada). Jawab " +
-		"analisa-nya LANGSUNG sendiri pake pengetahuan + tool (web_search/brain_search). run_id VALID " +
-		"cuma keluar dari hasil tool `task_run` yg beneran jalan, BUKAN karangan lo. Ngobrol biasa: " +
-		"jawab langsung.]\n")
+	b.WriteString("[TASK ROUTER: lo orchestrator dengan 3 jalur (pilih yg paling pas, JANGAN halu): " +
+		"(1) JAWAB SENDIRI — pertanyaan/obrolan/analisa yg bisa lo kerjain pake tool (web_search/" +
+		"brain_search/app) → kerjain langsung. " +
+		"(2) DIRECT ke 1 AGENT — ada 1 spesialis yg punya tool/persona yg pas → `agent_command(agent_id, text)` " +
+		"(delegasi ke agent itu, relay jawabannya). Cek agent yg ADA dulu; jangan ngarang agent_id. " +
+		"(3) GROUP/CREW — tugas butuh TIM (multi-agent, kategori task) → `task_run(category,subject)`, TAPI " +
+		"WAJIB cek `task_list` dulu; cuma kalau kategori BENERAN ADA (live). " +
+		"Kalau ga ada agent/crew yg cocok: JANGAN ngaku 'nyalain crew'/'delegasi', JANGAN ngarang run_id/" +
+		"agent_id, JANGAN bilang 'Status: Processing' — itu HALU. Jawab sendiri (jalur 1). run_id/hasil VALID " +
+		"cuma dari tool yg BENERAN jalan, BUKAN karangan. Alur lama 'mr-flow→group→agent' UDAH ga wajib: " +
+		"lo boleh LANGSUNG ke 1 agent (jalur 2) ATAU ke group (jalur 3).]\n")
 
 	// ===== TIER 2 — KONTEKS =====
 	var tier2 strings.Builder
