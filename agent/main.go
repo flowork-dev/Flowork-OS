@@ -550,6 +550,13 @@ func main() {
 		AgentsDir:     loader.AgentsDir(),
 		GroupWasmPath: "templates/group-template/agent.wasm",
 		Toggle:        agentmgr.ToggleAgent, // group on/off cascades to coordinator + members
+		TelegramToken: func() string { // push slash menu Telegram = group LIVE (fix nyangkut group lama)
+			if fdbT, err := floworkdb.Shared(); err == nil {
+				v, _ := fdbT.GetSecret("TELEGRAM_BOT_TOKEN")
+				return v
+			}
+			return ""
+		},
 	})
 	// Keep each group's roster in sync with its committed group.json mirror: export
 	// configured groups (so they can be committed) and restore them on a fresh

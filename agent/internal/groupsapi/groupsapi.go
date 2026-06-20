@@ -56,6 +56,7 @@ type Deps struct {
 	AgentsDir      string                               // where <id>.fwagent folders live
 	GroupWasmPath  string                               // template group wasm to copy on create
 	Toggle         func(id string, disabled bool) error // enable/disable one agent (= agentmgr.ToggleAgent)
+	TelegramToken  func() string                        // bot token (floworkdb secret) → push slash menu Telegram; nil/"" = skip
 }
 
 type Handler struct{ d Deps }

@@ -5,11 +5,12 @@
 // Repo: https://github.com/flowork-os/Flowork-OS
 // Locked at: 2026-06-12
 // Reason: PLUG-AND-PLAY group discovery. SyncToOrchestrator auto-discovers every
-//   group (kv group=1) and writes the "id|command|desc" list into the orchestrator's
-//   kv "groups" — the single source mr-flow-next reads to build the Telegram slash
-//   menu (groupCommandsJSON) and the ask_group tool. So a NEW group appears in the
-//   bot's slash commands and becomes runnable via Mr.Flow automatically — no kv
-//   editing, no code change per group. Called on boot + on create/config/delete.
+//
+//	group (kv group=1) and writes the "id|command|desc" list into the orchestrator's
+//	kv "groups" — the single source mr-flow-next reads to build the Telegram slash
+//	menu (groupCommandsJSON) and the ask_group tool. So a NEW group appears in the
+//	bot's slash commands and becomes runnable via Mr.Flow automatically — no kv
+//	editing, no code change per group. Called on boot + on create/config/delete.
 //
 // orchestrator.go — auto-sync the group list to the orchestrator (plug-and-play).
 package groupsapi
@@ -107,5 +108,9 @@ func (h *Handler) SyncToOrchestrator() int {
 	}
 	_ = ost.KVSet("groups", strings.Join(parts, ";"))
 	_ = ost.Close()
+	// Push daftar group LIVE ke menu slash Telegram (setMyCommands). Group dihapus →
+	// menu auto-nyusut; semua dihapus → menu kosong. Fix bug "slash nyangkut group lama"
+	// (owner 2026-06-20). Best-effort (telegram_commands.go).
+	h.syncTelegramCommands(parts)
 	return len(parts)
 }
