@@ -13,6 +13,16 @@
 //   ScheduleWakeup kalau nunggu), bounded maxGhostNudges (anti infinite). + Tier-1 prompt
 //   positif (sebut ScheduleWakeup). Model-agnostic (26B pun ga bisa ghosting struktural).
 //   wasm rebuilt (tinygo). Re-locked.
+// 2026-06-20 (owner-approved): ANTI-HALU-CREW-MATI. Akar: mr-flow "nyalain crew"
+//   yg udah dihapus (mis. "riset saham BBCA" → crew saham mati → hasil ga datang).
+//   4 lapis dicabut: (1) deterministicRoute +live-guard `categoryLive()` (route HANYA
+//   kalau cat ada di task_list live); (2) classifyRoute: enum kosong → return false
+//   (buang fallback hardcoded saham/crypto/dst yg pura-pura crew ada); (3) TASK ROUTER
+//   prompt + Tier-3 grounding `liveCrewCount()` → LLM HARAM ngarang run_id/'Processing'
+//   kalau ga ada crew, jawab sendiri; (4) data crew mati dibersihin (task_categories/
+//   _agents/trigger_rules/seed). State LIVE = sumber kebenaran ("hapus crew = auto
+//   ga bisa dipanggil"). QC: "riset saham BBCA" fresh → jawab analisa langsung (NO
+//   crew/run_id halu). wasm rebuilt. Re-locked.
 // 2026-06-20 (owner-approved): ANTI-ANCHOR (§6.1) di fetchHistory. Akar history-
 //   anchoring: window 16-turn nge-feed balik reply gagal/denial LAMA ("gw ga tau")
 //   → 26B ngechо pola basi. Fix: isAnchorNoise() skip assistant-reply gagal/denial
@@ -865,11 +875,13 @@ func buildSystemPrompt(cfg agentConfig) string {
 	b.WriteString("[MEMORY: nemu fakta penting jangka-panjang tentang Mr.Dev → simpan via " +
 		"memory_set('USER.md', <isi>); fakta/keputusan proyek → memory_set('MEMORY.md', <isi>). " +
 		"Biar ke-inget lintas sesi (snapshot-nya muncul di Tier-3).]\n")
-	b.WriteString("[TASK ROUTER: lo orchestrator. Kalau user minta ANALISA MENDALAM yang cocok sama " +
-		"Category Task yang ada (cek `task_list` dulu — mis. 'analisa saham BBCA'), JANGAN jawab " +
-		"setengah-setengah sendiri — TRIGGER `task_run(category,subject)` biar crew analis fokus yang " +
-		"ngerjain, terus bilang ke user lagi diproses + run_id. Pertanyaan ringan/ngobrol biasa → jawab " +
-		"langsung, ga usah task.]\n")
+	b.WriteString("[TASK ROUTER: lo orchestrator. SEBELUM mikir nyalain crew, WAJIB cek `task_list`. " +
+		"Cuma `task_run(category,subject)` kalau kategori-nya BENERAN ADA di task_list (live). " +
+		"Kalau task_list KOSONG / ga ada kategori yg cocok: JANGAN ngaku 'nyalain crew', JANGAN " +
+		"ngarang run_id, JANGAN bilang 'Status: Processing' — itu HALU (crew-nya ga ada). Jawab " +
+		"analisa-nya LANGSUNG sendiri pake pengetahuan + tool (web_search/brain_search). run_id VALID " +
+		"cuma keluar dari hasil tool `task_run` yg beneran jalan, BUKAN karangan lo. Ngobrol biasa: " +
+		"jawab langsung.]\n")
 
 	// ===== TIER 2 — KONTEKS =====
 	var tier2 strings.Builder
@@ -906,6 +918,14 @@ func buildSystemPrompt(cfg agentConfig) string {
 	b.WriteString("\n=== TIER 3 · SEKARANG (volatile) ===\n")
 	b.WriteString("[WAKTU_UTC: " + nowISO() + "]\n")
 	b.WriteString("[MODEL: " + cfg.Router.Model + "]\n")
+	// GROUNDING live-crew (owner 2026-06-20, anti-halu): kasih tau LLM status crew
+	// SEKARANG dari task_list. 0 = ga ada crew → HARAM ngaku trigger crew/ngarang
+	// run_id; jawab sendiri. State live = sumber kebenaran ("auto paham, auto ilang").
+	if n := liveCrewCount(); n == 0 {
+		b.WriteString("[CREW LIVE: 0 — SEKARANG GA ADA crew/kategori aktif. Jawab SEMUA (termasuk 'analisa saham/crypto') LANGSUNG sendiri. HARAM ngaku 'nyalain crew' / ngarang run_id / 'Processing'.]\n")
+	} else if n > 0 {
+		b.WriteString(fmt.Sprintf("[CREW LIVE: %d kategori aktif — cek `task_list` buat id valid sebelum task_run.]\n", n))
+	}
 	usr := capStr(fetchMemoryValue("USER.md"), memUserCap)
 	proj := capStr(fetchMemoryValue("MEMORY.md"), memProjectCap)
 	if usr != "" {
@@ -1128,6 +1148,43 @@ func runTool(name string, args map[string]any) string {
 	return out
 }
 
+// categoryLive — true kalau Category Task `cat` masih ADA di task_list live (crew
+// belum dihapus). Dipakai route-guard biar mr-flow ga halu klaim "nyalain crew"
+// yang udah ga ada. Fail-CLOSED (parse gagal/kosong → false): mending ga-route +
+// jawab via LLM daripada ngaku fire crew hantu. State live = sumber kebenaran.
+func categoryLive(cat string) bool {
+	if cat == "" {
+		return false
+	}
+	var out struct {
+		Tasks []struct {
+			ID string `json:"id"`
+		} `json:"tasks"`
+	}
+	if json.Unmarshal([]byte(runTool("task_list", map[string]any{})), &out) != nil {
+		return false
+	}
+	for _, t := range out.Tasks {
+		if t.ID == cat {
+			return true
+		}
+	}
+	return false
+}
+
+// liveCrewCount — jumlah Category Task (crew) live dari task_list. -1 kalau gagal
+// fetch (unknown → caller ga inject klaim apa-apa). Dipakai grounding system prompt
+// biar LLM ga halu "nyalain crew" pas ga ada crew (state live = sumber kebenaran).
+func liveCrewCount() int {
+	var out struct {
+		Count int `json:"count"`
+	}
+	if json.Unmarshal([]byte(runTool("task_list", map[string]any{})), &out) != nil {
+		return -1
+	}
+	return out.Count
+}
+
 // deterministicRoute — anti-halu routing. Pesan jelas minta analisa kategori yang
 // ADA (saham/crypto) → balik (category, subject, true) buat trigger crew LANGSUNG,
 // SKIP LLM. Reliable lepas dari model/kuota — fix kasus LLM halu "ga bisa fetch"
@@ -1166,6 +1223,12 @@ func deterministicRoute(text string) (category, subject string, ok bool) {
 		}
 	}
 	if !intent || cat == "" {
+		return "", "", false
+	}
+	// LIVE-GUARD (owner 2026-06-20, anti-halu): cat di-resolve dari keyword TAPI
+	// kategori/crew bisa udah dihapus. Route HANYA kalau cat masih ADA di task_list
+	// live → mr-flow ga "nyalain crew" yg udah ga ada (auto-ilang pas crew dihapus).
+	if !categoryLive(cat) {
 		return "", "", false
 	}
 	subject = strings.TrimSpace(strings.Join(kept, " "))
@@ -1259,16 +1322,13 @@ func classifyRoute(cfg agentConfig, userText string) (category, subject string, 
 		// Bash/Monitor buat shell) — bukan crew phantom yang ga ke-konfigurasi
 		// (dulu selalu error "kategori ga ada" + nge-hijack intent shell). Biarin
 		// classifier balik false buat intent komputer → jatuh ke tool-loop.
-		enum = []string{"saham", "crypto", "music-ops", "promo-ops"}
-		for _, k := range enum {
-			validCat[k] = true
-		}
-		descParts = []string{
-			"'saham'=analisa SAHAM/STOCK pasar manapun (BBCA,Tesla,AAPL)",
-			"'crypto'=analisa COIN/TOKEN kripto (Bitcoin,Ethereum,coin apapun)",
-			"'music-ops'=task produksi/upload musik YouTube",
-			"'promo-ops'=task materi promosi Flowork",
-		}
+		// NO LIVE CATEGORIES (owner 2026-06-20, anti-halu): task_categories kosong =
+		// ga ada crew live. JANGAN fallback ke enum hardcoded (saham/crypto/dst) yg
+		// pura-pura crew ada -> bikin mr-flow halu "nyalain crew" yg udah dihapus.
+		// Return false -> jatuh ke tool-loop/LLM (jawab langsung). Begitu crew dibikin
+		// ulang (task_categories keisi) -> routing auto-nyala lagi. ["auto paham, auto
+		// ilang" sesuai owner: live state = sumber kebenaran, bukan hardcode].
+		return "", "", false
 	}
 	enum = append(enum, "chat")
 	// GROUNDING (2026-06-15): jangan maksa kategori terdekat kalau gak bener-bener cocok

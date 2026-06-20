@@ -1,3 +1,13 @@
+// === LOCKED FILE ===
+// Status: STABLE — DO NOT MODIFY without owner approval.
+// Owner: Aola Sahidin (Mr.Dev)
+// Repo: https://github.com/flowork-os/Flowork-OS
+// Locked at: 2026-06-20
+// 2026-06-20 (owner-approved): startTaskflowRun +LIVE-MEMBER GUARD — tolak fire crew
+//   kalau GAK ADA member yg live (host.AgentIDs). Anti-halu "panggil crew/group mati":
+//   kategori bisa ketinggalan di DB walau agent member-nya udah dihapus → guard bikin
+//   "hapus crew = auto ga bisa dipanggil" (state live = sumber kebenaran). Verified live.
+//
 // taskflow_handler.go — FASE 4/5: HTTP API Category Task.
 //
 // Trigger + CRUD kategori/crew + run history (timeline). Definisi task di
@@ -272,6 +282,25 @@ func startTaskflowRun(host *kernelhost.Host, store *floworkdb.Store, category, s
 	}
 	if len(cat.Crew) == 0 {
 		return 0, fmt.Errorf("crew kosong — tambah analis dulu")
+	}
+	// LIVE-MEMBER GUARD (owner 2026-06-20, anti "halu panggil crew/group mati"):
+	// kategori bisa ada di DB TAPI member-nya udah dihapus (agent dir ilang, mis.
+	// crew dihapus tapi task_categories ketinggalan). Tolak fire kalau GAK ADA
+	// satupun member yg LIVE → mr-flow ga "nyalain crew hantu" lalu hasil ga datang.
+	// State agent LIVE = sumber kebenaran → "hapus crew = otomatis ga bisa dipanggil".
+	live := make(map[string]bool)
+	for _, id := range host.AgentIDs() {
+		live[id] = true
+	}
+	anyLive := false
+	for _, m := range cat.Crew {
+		if live[m.AgentID] {
+			anyLive = true
+			break
+		}
+	}
+	if !anyLive {
+		return 0, fmt.Errorf("crew '%s' udah ga ada — semua %d member-nya udah dihapus; bikin ulang crew-nya dulu", cat.Name, len(cat.Crew))
 	}
 	runID, err := store.CreateRun(category, subject, "owner", notify)
 	if err != nil {
