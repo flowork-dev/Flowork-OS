@@ -158,7 +158,9 @@ function wireCard(mainEl, r) {
 function targetOptions(sel) {
   const a = agents.map(x => `<option value="agent:${escAttr(x.id)}" ${sel === 'agent:' + x.id ? 'selected' : ''}>🤖 ${esc(x.display_name || x.id)}</option>`).join('');
   const g = groups.map(x => `<option value="group:${escAttr(x.id)}" ${sel === 'group:' + x.id ? 'selected' : ''}>👥 ${esc(x.display_name || x.id)}</option>`).join('');
-  return `<optgroup label="Agents">${a}</optgroup>${g ? `<optgroup label="Groups">${g}</optgroup>` : ''}`;
+  // Aksi SISTEM (owner 2026-06-20 "all compact ke triger"): jadwalin Compact All via trigger.
+  const sys = `<option value="system:compact-all" ${sel === 'system:compact-all' ? 'selected' : ''}>🧠 Compact All (semua agent → brain)</option>`;
+  return `<optgroup label="Agents">${a}</optgroup>${g ? `<optgroup label="Groups">${g}</optgroup>` : ''}<optgroup label="Sistem">${sys}</optgroup>`;
 }
 
 function openForm(mainEl, r) {

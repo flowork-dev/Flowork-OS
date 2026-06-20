@@ -120,6 +120,7 @@ export async function render(root) {
 
       <div class="ag-toolbar">
         <button id="ag-refresh" class="ag-btn ghost">${esc(t('menu.tab.agents.btn_refresh'))}</button>
+        <button id="ag-compact-all" class="ag-btn ghost" title="Compact All — semua agent: digest pengalaman ke brain + trim konteks (anti-halu)">🧠 Compact All</button>
         <label for="ag-file" id="ag-drop" class="ag-drop">
           <span class="ag-drop-icon">📥</span>
           <span class="ag-drop-strong">${esc(t('menu.tab.agents.drop_label'))}</span>
@@ -138,7 +139,36 @@ export async function render(root) {
 
   wireUpload(root);
   document.getElementById('ag-refresh').onclick = () => refreshList(root);
+  const caBtn = document.getElementById('ag-compact-all');
+  if (caBtn) caBtn.onclick = () => compactAllAgents(caBtn);
   refreshList(root);
+}
+
+// LOCKED (soft, owner-approved 2026-06-20): compact di menu agent (per-agent + all).
+// compactOneAgent — Compact Now 1 agent: digest pengalaman → brain + trim konteks (force=abaikan
+// ambang). Owner 2026-06-20 (pindah dari menu cognitive). Aman: cuma yg udah ke-brain yg di-trim.
+async function compactOneAgent(id, btn) {
+  if (!confirm(`Compact "${id}" sekarang?\nDigest pengalaman → brain + trim interaksi lama (sisain yg terbaru). Pengalaman ga ilang (pindah ke brain).`)) return;
+  const orig = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  try {
+    const r = await fetchJSON(`/api/agents/compact?id=${encodeURIComponent(id)}&force=1`, { method: 'POST' });
+    alert(`🧠 ${id}: digested=${r.digested}, trimmed=${r.trimmed} (${r.note})`);
+  } catch (e) { alert('❌ compact: ' + (e.message || e)); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = orig; } }
+}
+
+// compactAllAgents — Compact All: semua agent sekaligus (force). Bisa makan waktu (LLM digest per
+// agent over-threshold). Resilient per-agent di server.
+async function compactAllAgents(btn) {
+  if (!confirm('Compact ALL agent sekarang?\nTiap agent: digest pengalaman → brain + trim konteks lama. Bisa beberapa menit (LLM). Pengalaman ga ilang.')) return;
+  const orig = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ compacting…'; }
+  try {
+    const r = await fetchJSON('/api/agents/compact-all?force=1', { method: 'POST' });
+    alert(`🧠 ${r.note || ('Compact All jalan di background (' + (r.agents || '?') + ' agent).')}`);
+  } catch (e) { alert('❌ compact-all: ' + (e.message || e)); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = orig; } }
 }
 
 function styles() {
@@ -486,6 +516,7 @@ function renderCard(a) {
         <button class="ag-btn"         data-action="duplicate" title="Duplicate / copy this agent">⧉</button>
         <button class="ag-btn"         data-action="slash" title="${escAttr(t('menu.tab.agents.btn_slash_title') || 'Quick slash command')}">/</button>
         <button class="ag-btn"         data-action="download" title="${escAttr(t('menu.tab.agents.btn_download'))}">⬇</button>
+        <button class="ag-btn"         data-action="compact" title="Compact Now — digest pengalaman ke brain + trim konteks (anti-halu)">🧠</button>
         <button class="ag-btn danger"  data-action="remove" title="${escAttr(t('menu.tab.agents.btn_remove'))}">🗑</button>
       </div>
     </article>
@@ -516,6 +547,9 @@ function wireCard(root, a) {
     // Direct browser download — server kirim Content-Disposition.
     window.location.href = `/api/agents/download?id=${encodeURIComponent(a.id)}`;
   };
+  // Compact Now (owner 2026-06-20, pindah dari menu cognitive): digest pengalaman agent ini ke
+  // brain + trim konteks (force=1 = abaikan ambang, owner mau sekarang). Anti-halu konteks panjang.
+  card.querySelector('[data-action="compact"]').onclick = (e) => compactOneAgent(a.id, e.currentTarget);
   card.querySelector('[data-action="toggle"]').onchange = async (e) => {
     const wantDisabled = !e.target.checked;
     const meta = card.querySelector('.ag-meta span:last-child');

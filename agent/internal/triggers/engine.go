@@ -25,6 +25,9 @@ type Engine struct {
 	Store  *floworkdb.Store
 	Invoke func(ctx context.Context, target, text, caller string) (string, error) // = host.InvokeAgentMessage
 	Notify func(ctx context.Context, text string) error                           // = notifyOwnerTelegram
+	// SystemAction — aksi SISTEM (bukan invoke agent), mis. "compact-all". Di-wire dari main
+	// (akses host.AgentIDs). target_kind="system" → runAction panggil ini, bukan Invoke. nil = skip.
+	SystemAction func(ctx context.Context, action string) (string, error)
 }
 
 var (
@@ -126,6 +129,19 @@ func (e *Engine) runAction(r floworkdb.Trigger, ev Event, trigger string) int64 
 	cctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancel()
 	status, errText, reply := "ok", "", ""
+	if r.TargetKind == "system" {
+		// Aksi sistem (mis. compact-all) — bukan invoke agent. owner 2026-06-20: "all compact ke triger".
+		if e.SystemAction == nil {
+			status, errText = "error", "system action not wired"
+		} else if out, ierr := e.SystemAction(cctx, r.Target); ierr != nil {
+			status, errText = "error", ierr.Error()
+		} else {
+			reply = out
+		}
+		_ = e.Store.FinishTriggerRun(runID, status, reply, errText)
+		_ = e.Store.MarkTriggerFired(r.ID, time.Now().UTC().Format(time.RFC3339), status)
+		return runID
+	}
 	if e.Invoke == nil {
 		status, errText = "error", "invoke not wired"
 	} else if out, ierr := e.Invoke(cctx, r.Target, prompt, "trigger:"+r.ID); ierr != nil {

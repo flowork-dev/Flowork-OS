@@ -44,8 +44,7 @@ export async function render(container) {
         <input id="cgAgent" value="mr-flow" spellcheck="false"
           style="background:#0b1020;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:5px 10px;font-size:.82rem;width:160px"/>
         <button id="cgLoad" class="btn-primary" style="padding:5px 14px;font-size:.8rem">Load</button>
-        <button id="cgDream" title="Cerna percakapan pending → graph (Tier-2 digest, manual). Auto-nightly: set FLOWORK_CGM_AUTODIGEST=1." style="padding:5px 14px;font-size:.8rem;background:#1e293b;border:1px solid #475569;color:#c4b5fd;border-radius:6px;cursor:pointer">🌙 Dream sekarang</button>
-        <span id="cgStats" style="font-size:.78rem;color:#94a3b8"></span>
+        <span id="cgStats" style="font-size:.78rem;color:#94a3b8" title="Compact/digest pindah ke menu Agent (🧠 Compact Now / Compact All)">Compact ada di menu Agent →</span>
       </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:.72rem;color:#94a3b8;margin-bottom:8px">
         <span>● <span style="color:#f472b6">person</span></span>
@@ -66,20 +65,8 @@ export async function render(container) {
 
   const load = () => draw(d3, container, container.querySelector('#cgAgent').value.trim() || 'mr-flow');
   container.querySelector('#cgLoad').onclick = load;
-  // 🌙 Dream sekarang — manual Tier-2 digest (percakapan pending → graph). Pakai
-  // pipeline CGM aman (DigestAgent), BUKAN router legacy dream. Owner 2026-06-20 §6.2.
-  const dreamBtn = container.querySelector('#cgDream');
-  dreamBtn.onclick = async () => {
-    const agent = container.querySelector('#cgAgent').value.trim() || 'mr-flow';
-    const stats = container.querySelector('#cgStats');
-    dreamBtn.disabled = true; const orig = dreamBtn.textContent; dreamBtn.textContent = '🌙 Dreaming…';
-    try {
-      const r = await (await fetch(`/api/agents/cognitive/digest?id=${encodeURIComponent(agent)}&tier=2`, { method: 'POST' })).json();
-      if (r.error) { stats.textContent = `❌ ${r.error}`; }
-      else { stats.textContent = `✅ dream: ${r.digested} percakapan → +${r.nodes_added} node, +${r.edges_added} edge` + (r.quarantined ? `, ${r.quarantined} karantina` : '') + (r.tensions ? `, ${r.tensions} tension` : ''); load(); }
-    } catch (e) { stats.textContent = `❌ ${e.message}`; }
-    finally { dreamBtn.disabled = false; dreamBtn.textContent = orig; }
-  };
+  // Tombol digest/compact PINDAH ke menu Agent (🧠 Compact Now per-agent + Compact All) —
+  // owner 2026-06-20. Tab ini fokus VIEW graph; abis compact dari menu Agent, klik Load buat refresh.
   load();
 }
 

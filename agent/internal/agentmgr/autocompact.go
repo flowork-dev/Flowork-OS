@@ -100,12 +100,17 @@ func AutoCompactAgent(agentID string, maxLive, keepRecent int) (trimmed int64, d
 }
 
 // AutoCompactAllAgents — cek semua agent, compact yg lewat ambang. Resilient per-agent (1 rusak
-// ga nyeret yg lain). Dipanggil cron berkala (lihat main). Hemat: cuma agent over-threshold yg
-// kena LLM digest; sisanya cuma 1 query COUNT.
-func AutoCompactAllAgents(agentIDs []string) {
+// ga nyeret yg lain). Dipanggil cron berkala (force=false) ATAU tombol "Compact All" (force=true →
+// abaikan ambang). Return ringkasan per-agent (buat handler GUI). Hemat: kalau ga force, mayoritas
+// cuma 1 query COUNT (agent under-threshold ga kena LLM).
+func AutoCompactAllAgents(agentIDs []string, force bool) []map[string]any {
 	maxLive, keepRecent, enabled := compactConfig()
-	if !enabled {
-		return
+	out := make([]map[string]any, 0, len(agentIDs))
+	if !enabled && !force {
+		return out
+	}
+	if force {
+		maxLive = 0
 	}
 	for _, id := range agentIDs {
 		func() {
@@ -118,8 +123,12 @@ func AutoCompactAllAgents(agentIDs []string) {
 			if tr > 0 || dg > 0 {
 				log.Printf("[auto-compact] %s: digested=%d trimmed=%d (%s)", id, dg, tr, note)
 			}
+			if tr > 0 || dg > 0 || force {
+				out = append(out, map[string]any{"agent": id, "digested": dg, "trimmed": tr, "note": note})
+			}
 		}()
 	}
+	return out
 }
 
 // CompactConfigHandler — GET status / POST set ambang auto-compact (owner GUI). KV global.

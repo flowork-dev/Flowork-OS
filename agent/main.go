@@ -426,7 +426,7 @@ func main() {
 							log.Printf("auto-compact PANIC (ticker selamat): %v", r)
 						}
 					}()
-					agentmgr.AutoCompactAllAgents(host.AgentIDs())
+					agentmgr.AutoCompactAllAgents(host.AgentIDs(), false)
 				}()
 			}
 		}
@@ -510,7 +510,18 @@ func main() {
 	// Reuse: InvokeAgentMessage (aksi) + notifyOwnerTelegram (deliver). Hook ke tick di bawah.
 	_ = fdb.EnsureTriggerSchema()
 	go func() { _ = fdb.SweepTriggerKeys(30) }() // retensi ledger dedup
-	trigEngine := &triggers.Engine{Store: fdb, Invoke: host.InvokeAgentMessage, Notify: notifyOwnerTelegram}
+	trigEngine := &triggers.Engine{Store: fdb, Invoke: host.InvokeAgentMessage, Notify: notifyOwnerTelegram,
+		// Aksi SISTEM buat trigger (owner 2026-06-20 "all compact ke triger"): target_kind=system.
+		SystemAction: func(ctx context.Context, action string) (string, error) {
+			switch action {
+			case "compact-all":
+				go agentmgr.AutoCompactAllAgents(host.AgentIDs(), true) // async (bisa lama, LLM)
+				return "compact-all dijadwalkan (jalan di background)", nil
+			default:
+				return "", fmt.Errorf("system action ga dikenal: %s", action)
+			}
+		},
+	}
 
 	// APPS platform (ROADMAP 4): program dipakai MANUSIA (GUI) & AGENT (tool) di state yang SAMA,
 	// core LINTAS BAHASA (runtime:process). Load apps/<id>/ → daftarkan operasi sbg tool agent.
@@ -870,6 +881,20 @@ func main() {
 	mux.HandleFunc("/api/agents/cognitive/digest", agentmgr.CognitiveDigestHandler)
 	mux.HandleFunc("/api/agents/compact", agentmgr.CompactAgentHandler) // auto-compact manual trigger (owner/QC)
 	mux.HandleFunc("/api/compact/config", agentmgr.CompactConfigHandler) // ambang auto-compact (GUI Settings)
+	mux.HandleFunc("/api/agents/compact-all", func(w http.ResponseWriter, r *http.Request) { // Compact All (menu Agent)
+		if r.Method != http.MethodPost {
+			httpx.WriteJSON(w, map[string]any{"error": "method not allowed (POST)"})
+			return
+		}
+		// ASYNC: compact-all (force) digest LLM tiap agent → bisa puluhan menit, JANGAN blok HTTP.
+		force := r.URL.Query().Get("force") == "1"
+		ids := host.AgentIDs()
+		go agentmgr.AutoCompactAllAgents(ids, force)
+		httpx.WriteJSON(w, map[string]any{
+			"ok": true, "async": true, "agents": len(ids),
+			"note": "Compact All jalan di background buat " + strconv.Itoa(len(ids)) + " agent (digest→trim). Cek log / refresh nanti.",
+		})
+	})
 	mux.HandleFunc("/api/agents/zombie/findings", agentmgr.ZombieFindingsHandler)
 	mux.HandleFunc("/api/agents/zombie/ack", agentmgr.ZombieAckHandler)
 	mux.HandleFunc("/api/agents/zombie/scan", agentmgr.ZombieScanHandler)
