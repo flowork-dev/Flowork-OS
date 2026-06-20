@@ -890,8 +890,8 @@ func main() {
 	// R7 fase-2b core-apply (🔴 DEV-only): proposal core 'NEW:' → git-worktree sandbox →
 	// codegen → test-gate → STAGE diff buat review. Edit existing/LOCKED/delete = error edukasi.
 	mux.HandleFunc("/api/evolve/core-apply", agentmgr.EvolveCoreApplyHandler(evolveGateDeps(), evolveCoreApplier()))
-	mux.HandleFunc("/api/evolve/council", agentmgr.EvolveCouncilHandler(evolveCouncilJudge())) // A1: dewan adversarial (Pembela/Penantang/Hakim panel-3)
-	mux.HandleFunc("/api/evolve/proposal/delete", agentmgr.EvolveProposalDeleteHandler)        // hapus usulan (1 / bulk by-status)
+	mux.HandleFunc("/api/evolve/council", agentmgr.EvolveCouncilHandler(evolveCouncilJudgeViaGroup(host))) // A1: dewan adversarial via grup self-evolution (5 agent: pembela/penantang/hakim panel-3)
+	mux.HandleFunc("/api/evolve/proposal/delete", agentmgr.EvolveProposalDeleteHandler)                    // hapus usulan (1 / bulk by-status)
 	mux.HandleFunc("/api/evolve/stages", agentmgr.EvolveStagesHandler)
 	// Milestone C STAGE review: owner Approve (commit isi yg direview + maybe push) / Reject staged diff.
 	mux.HandleFunc("/api/evolve/stage-action", agentmgr.EvolveStageActionHandler(evolveGateDeps(), evolveStageCommitter()))

@@ -50,7 +50,6 @@ func seedSelfEvolutionGroup(groups *groupsapi.Handler) {
 	if err != nil || len(tplWasm) == 0 {
 		return // template belum ke-build → skip (start.sh build dulu)
 	}
-	strongModel := coderModel("") // rule: strong cloud model — tiap otak pakai ini
 	memberIDs := make([]string, 0, len(evoCouncilRoster))
 	for _, m := range evoCouncilRoster {
 		memberIDs = append(memberIDs, m.ID)
@@ -64,11 +63,18 @@ func seedSelfEvolutionGroup(groups *groupsapi.Handler) {
 			_ = os.WriteFile(filepath.Join(dir, "agent.wasm"), tplWasm, 0o644)
 			_ = os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("agent.wasm\nworkspace/*.db\nworkspace/*.db-*\n"), 0o644)
 		}
-		// persona (peran dewan) + model (strong-cloud) — DB-based, idempoten (overwrite OK).
+		// persona (peran dewan) + tools relevan — DB-based, idempoten. MODEL TIDAK
+		// di-hardcode (owner 2026-06-20): di-set per-agent via Settings GUI (Router→Model).
+		// Default = model setting global; rule "strong cloud model" tetep di-ENFORCE GATE
+		// (ModelStrong) buat auto-apply, jadi aman walau model member belum di-set kuat.
 		dbPath := agentdb.Resolve(m.ID, dir)
 		if st, e := agentdb.Open(dbPath); e == nil {
 			_ = st.SetPrompt(m.Persona)
-			_ = st.SetRouterModel(strongModel)
+			// Tools deliberasi: grounding doktrin (anti-halu) + insting keamanan (penantang/hakim
+			// nyari celah). Subscribe = ke-expose ke LLM lewat tools/specs.
+			for _, t := range []string{"brain_search_shared", "instinct_recall", "graph_recall"} {
+				_ = st.SubscribeTool(t, "seed:self-evolution", "{}")
+			}
 			_ = st.Close()
 		}
 		// DNA (konstitusi sacred + genome) — warga penuh, ikut standar.
@@ -90,6 +96,7 @@ func evoMemberManifest(id, display string) []byte {
   "display_name": %q,
   "description": "Otak dewan Self-Evolution (di-orchestrate mr-flow / scheduler evolusi). Gate keamanan di harness.",
   "version": "1.0.0",
+  "min_kernel_version": "1.0.0",
   "abi_version": 1,
   "entry": "agent.wasm",
   "memory_max_mb": 96,

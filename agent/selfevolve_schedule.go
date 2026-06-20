@@ -98,7 +98,7 @@ func runEvolveScheduledCycle(host *kernelhost.Host, fdb *floworkdb.Store, groups
 	// lewat Dewan → approve→apply/hold · reject→prune · stage. Bounded per-siklus biar hemat token.
 	// Loop nutup: reflect ngisi → drain ngosongin (apply/reject) → karma numbuh → matang → core kebuka.
 	drainBatch := agentmgr.EvolvePendingForDrain(evolveDrainPerCycle)
-	applied := agentmgr.EvolveScheduleAutoApply(evolveGateDeps(), evolveApplier(host, fdb, groups), evolveCouncilJudge(), drainBatch)
+	applied := agentmgr.EvolveScheduleAutoApply(evolveGateDeps(), evolveApplier(host, fdb, groups), evolveCouncilJudgeViaGroup(host), drainBatch)
 	if len(applied) > 0 {
 		out["auto_applied"] = applied
 	}
