@@ -8,6 +8,7 @@ package agentmgr
 // 12 jam). Urutan AMAN: digest→VERIFY→trim. Fail-safe: digest gagal = ga trim (no loss).
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
@@ -119,6 +120,46 @@ func AutoCompactAllAgents(agentIDs []string) {
 			}
 		}()
 	}
+}
+
+// CompactConfigHandler — GET status / POST set ambang auto-compact (owner GUI). KV global.
+//
+//	GET  /api/compact/config → {enabled, max_interactions, keep_recent}
+//	POST {enabled?:bool, max_interactions?:int, keep_recent?:int}
+func CompactConfigHandler(w http.ResponseWriter, r *http.Request) {
+	db, err := floworkdb.Shared()
+	if err != nil {
+		httpx.WriteJSON(w, map[string]any{"error": "db: " + err.Error()})
+		return
+	}
+	if r.Method == http.MethodPost {
+		var b struct {
+			Enabled         *bool `json:"enabled"`
+			MaxInteractions *int  `json:"max_interactions"`
+			KeepRecent      *int  `json:"keep_recent"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&b)
+		if b.Enabled != nil {
+			v := "1"
+			if !*b.Enabled {
+				v = "0"
+			}
+			_ = db.SetKV("compact_enabled", v)
+		}
+		if b.MaxInteractions != nil && *b.MaxInteractions > 0 {
+			_ = db.SetKV("compact_max_interactions", strconv.Itoa(*b.MaxInteractions))
+		}
+		if b.KeepRecent != nil && *b.KeepRecent >= 0 {
+			_ = db.SetKV("compact_keep_recent", strconv.Itoa(*b.KeepRecent))
+		}
+		httpx.WriteJSON(w, map[string]any{"ok": true})
+		return
+	}
+	maxLive, keepRecent, enabled := compactConfig()
+	httpx.WriteJSON(w, map[string]any{
+		"enabled": enabled, "max_interactions": maxLive, "keep_recent": keepRecent,
+		"note": "Tiap " + "15 menit agent yg interaksi non-deleted-nya > max bakal di-digest ke brain + trim (sisain keep_recent terbaru). Pengalaman ga ilang (pindah ke brain).",
+	})
 }
 
 // CompactAgentHandler — POST /api/agents/compact?id=<agent>[&force=1]. Manual trigger (owner

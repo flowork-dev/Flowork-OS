@@ -133,6 +133,7 @@ const SEGMENTS = [
   { key: 'youtube', label: () => t('menu.tab.settings.seg_youtube'), render: renderYouTube },
   { key: 'guardian', label: () => t('menu.tab.settings.seg_guardian'), render: renderGuardian },
   { key: 'evolve', label: () => '🧬 Auto-Push', render: renderEvolvePush },
+  { key: 'compact', label: () => '🧠 Auto-Compact', render: renderCompact },
 ];
 
 // The YouTube OAuth flow polls /api/settings/youtube every 2s while the owner
@@ -485,6 +486,60 @@ function cleanErr(e) {
   const j = m.indexOf('{');
   if (j >= 0) { try { return JSON.parse(m.slice(j)).error || m; } catch {} }
   return m;
+}
+
+// LOCKED (soft, owner-approved 2026-06-20): GUI ambang auto-compact.
+// renderCompact — Settings AUTO-COMPACT (owner 2026-06-20): ambang konteks → agent auto
+// digest pengalaman ke brain + trim (anti-halu konteks panjang). Pengalaman ga ilang (pindah
+// ke brain), cuma raw interaksi lama di-trim. Trigger by UKURAN, cek tiap 15 menit.
+async function renderCompact(panel) {
+  panel.innerHTML = `
+    <div class="set-card">
+      <h3>🧠 Auto-Compact Konteks (anti-halu)</h3>
+      <div class="sub">Kalau interaksi agent numpuk, AI bisa halu pas konteks kepanjangan. Tiap 15 menit,
+        agent yang interaksinya lewat ambang otomatis: <b>digest pengalaman ke brain</b> (kayak dream) →
+        <b>trim</b> interaksi lama (sisain yang terbaru). Pengalaman TIDAK hilang — pindah ke brain,
+        bisa di-recall. Aman: cuma yang sudah masuk brain yang di-trim.</div>
+      <label class="set-row" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="cmpEnabled" style="width:auto"> <span>Aktifkan auto-compact</span>
+      </label>
+      <div class="set-row">
+        <label style="font-size:0.85rem;min-width:180px;display:inline-block">Ambang (jumlah interaksi):</label>
+        <input type="number" id="cmpMax" min="20" step="20" style="width:110px">
+      </div>
+      <div class="set-hint">Agent yang interaksi non-deleted-nya > angka ini bakal di-compact. Default 400.</div>
+      <div class="set-row">
+        <label style="font-size:0.85rem;min-width:180px;display:inline-block">Sisain terbaru (keep):</label>
+        <input type="number" id="cmpKeep" min="0" step="10" style="width:110px">
+      </div>
+      <div class="set-hint">Berapa interaksi TERBARU yang tetap utuh di konteks (tidak di-trim). Default 60.</div>
+      <div class="set-row"><button class="set-btn-primary" id="cmpSave">${esc(t('common.btn.save'))}</button></div>
+      <div class="set-msg" id="cmpMsg"></div>
+    </div>
+  `;
+  const msg = panel.querySelector('#cmpMsg');
+  try {
+    const d = await fetchJSON('/api/compact/config');
+    panel.querySelector('#cmpEnabled').checked = d.enabled !== false;
+    panel.querySelector('#cmpMax').value = d.max_interactions || 400;
+    panel.querySelector('#cmpKeep').value = (d.keep_recent ?? 60);
+  } catch (e) { msg.className = 'set-msg err'; msg.textContent = cleanErr(e); }
+  panel.querySelector('#cmpSave').addEventListener('click', async () => {
+    const enabled = panel.querySelector('#cmpEnabled').checked;
+    const max_interactions = parseInt(panel.querySelector('#cmpMax').value, 10) || 400;
+    const keep_recent = parseInt(panel.querySelector('#cmpKeep').value, 10);
+    msg.className = 'set-msg'; msg.textContent = '';
+    if (keep_recent >= max_interactions) {
+      msg.className = 'set-msg err'; msg.textContent = 'keep_recent harus < ambang (kalau ga, ga ada yg di-trim)'; return;
+    }
+    try {
+      await fetchJSON('/api/compact/config', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled, max_interactions, keep_recent: isNaN(keep_recent) ? 60 : keep_recent }),
+      });
+      msg.className = 'set-msg ok'; msg.textContent = 'Tersimpan ✓';
+    } catch (e) { msg.className = 'set-msg err'; msg.textContent = cleanErr(e); }
+  });
 }
 
 // ── Self-finance wallet (R8 fase-1) ──────────────────────────────────────────

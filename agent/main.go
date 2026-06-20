@@ -869,6 +869,7 @@ func main() {
 	// Owner-controlled; always runs. Auto-digest in dream cron gated by env.
 	mux.HandleFunc("/api/agents/cognitive/digest", agentmgr.CognitiveDigestHandler)
 	mux.HandleFunc("/api/agents/compact", agentmgr.CompactAgentHandler) // auto-compact manual trigger (owner/QC)
+	mux.HandleFunc("/api/compact/config", agentmgr.CompactConfigHandler) // ambang auto-compact (GUI Settings)
 	mux.HandleFunc("/api/agents/zombie/findings", agentmgr.ZombieFindingsHandler)
 	mux.HandleFunc("/api/agents/zombie/ack", agentmgr.ZombieAckHandler)
 	mux.HandleFunc("/api/agents/zombie/scan", agentmgr.ZombieScanHandler)
