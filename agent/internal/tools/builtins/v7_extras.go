@@ -203,6 +203,7 @@ func (codemapCountTool) Schema() tools.Schema {
 	}
 }
 
+// LOCKED (soft, owner-approved 2026-06-20 codemap-fix): count akurat + fallback canonical. Jangan ubah tanpa izin.
 func (codemapCountTool) Run(ctx context.Context, args map[string]any) (tools.Result, error) {
 	store, ok := tools.FromStore(ctx)
 	if !ok || store == nil {

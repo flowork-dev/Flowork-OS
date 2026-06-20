@@ -90,6 +90,7 @@ func (codemapStatsTool) Schema() tools.Schema {
 	}
 }
 
+// LOCKED (soft, owner-approved 2026-06-20 codemap-fix): agregat akurat + fallback canonical. Jangan ubah tanpa izin.
 func (codemapStatsTool) Run(ctx context.Context, _ map[string]any) (tools.Result, error) {
 	store, ok := tools.FromStore(ctx)
 	if !ok {

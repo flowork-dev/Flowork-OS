@@ -601,7 +601,7 @@ func CodemapReindexCompatHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ── NODE-LEVEL (fungsi/type/method) ──────────────────────────────────────
+	// ── NODE-LEVEL (fungsi/type/method) ── LOCKED (soft, owner-approved 2026-06-20) ──
 	// Fix owner 2026-06-20: codemap_search/stats/count baca tabel codemap_NODES tapi
 	// itu KOSONG — selama ini cuma file-level (di atas) yg ke-index; node-index cuma
 	// per-file manual (/api/agents/codemap/index). Sekali reindex sekarang ALSO bulk

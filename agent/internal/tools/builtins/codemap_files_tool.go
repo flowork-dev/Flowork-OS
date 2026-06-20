@@ -1,3 +1,8 @@
+// === LOCKED FILE (soft) === Status: STABLE — owner-approved 2026-06-20 (codemap-works-for-all-agents).
+// LOCKED ≠ FREEZE (boleh diedit dgn izin owner).
+// Owner: Aola Sahidin (Mr.Dev). Reason: fix codemap blank — tool codemap_files (peta level-FILE) +
+// fallback canonical (canonicalCodemapAgent/Nodes/Stats) yg dipake codemap_search/stats/count
+// biar SEMUA agent yg di-centang toolnya dapat peta. Live-tested. Jangan ubah tanpa izin.
 package builtins
 
 import (

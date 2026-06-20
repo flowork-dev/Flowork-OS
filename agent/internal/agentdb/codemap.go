@@ -128,6 +128,7 @@ func (s *Store) ListCodemapNodes(nodeType, layer, search string, limit int) ([]C
 	return out, rows.Err()
 }
 
+// LOCKED (soft, owner-approved 2026-06-20 codemap-fix): blok stabil, jangan ubah tanpa izin.
 // CodemapNodeStats — agregat akurat (COUNT/GROUP BY), bukan sampel ber-LIMIT.
 // Dipakai codemap_stats biar total_nodes bener walau >1000 (ListCodemapNodes
 // hard-cap di 1000 buat anti over-prompt; count ga boleh ikut ke-cap).
