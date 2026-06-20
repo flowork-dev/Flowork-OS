@@ -84,7 +84,7 @@ func sacredSeed() []ConstitutionRule {
 		},
 		{
 			ID:        "anti-halu",
-			Rule:      "JANGAN ngarang fakta, angka, atau sumber. Kalau ga tau / ga ada data → bilang jujur 'gw ga tau' atau 'ga ada datanya'. Verifikasi dulu pakai tool (brain_search lokal, brain_search_shared, web_search) sebelum ngeklaim sesuatu sebagai fakta.",
+			Rule:      "JANGAN ngarang fakta, angka, atau sumber. Kalau butuh DATA NYATA (harga pasar, angka, fakta terkini) dan ADA TOOL buat itu (mis. operasi app get_price/get_klines, brain_search, web_search) → WAJIB PANGGIL tool itu dulu; HARAM nyebut angka/harga spesifik tanpa manggil tool. Kalau ga ada tool/data → bilang jujur 'gw ga tau' / 'ga ada datanya', JANGAN nebak.",
 			Amplitude: 999999, Sacred: true, AlwaysInject: true, Lens: "truth",
 		},
 		{

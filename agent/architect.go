@@ -52,10 +52,13 @@ import (
 	"strings"
 	"time"
 
+	"flowork-gui/internal/agentdb"
 	fwapps "flowork-gui/internal/apps"
 	"flowork-gui/internal/floworkdb"
 	"flowork-gui/internal/groupsapi"
+	"flowork-gui/internal/kernel/loader"
 	"flowork-gui/internal/kernelhost"
+	"flowork-gui/internal/tools"
 )
 
 var appUIIDRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{1,40}$`)
@@ -207,6 +210,63 @@ func architectBuildApp(ctx context.Context, host *kernelhost.Host, store *flowor
 	}, nil
 }
 
+// availableDataTools — enumerasi TOOL DATA NYATA yg bisa di-pakai member tim: operasi app
+// (prefix "app_", mis. app_flowalpha_get_price) yg narik data live (harga/pasar/dll). Owner
+// 2026-06-21: tim analisa WAJIB pakai data riil, BUKAN ngarang. Balik (hint buat prompt desain,
+// set nama tool valid). Cap biar prompt ga bengkak.
+func availableDataTools() (hint string, valid map[string]bool) {
+	valid = map[string]bool{}
+	var b strings.Builder
+	n := 0
+	for _, name := range tools.ListNames() {
+		if !strings.HasPrefix(name, "app_") || n >= 40 {
+			continue
+		}
+		valid[name] = true
+		desc := ""
+		if t, ok := tools.Lookup(name); ok {
+			desc = t.Schema().Description
+		}
+		b.WriteString("- " + name + ": " + trimStr(desc, 120) + "\n")
+		n++
+	}
+	return b.String(), valid
+}
+
+// subscribeMemberTools — subscribe daftar tool ke 1 member tim (state.db-nya), biar tool itu
+// ke-EXPOSE ke LLM-nya (app tool subscription-only, ga di core). Cuma tool valid yg di-subscribe.
+// Best-effort: gagal subscribe 1 tool GA mecahin build.
+func subscribeMemberTools(memberID string, toolNames []string, valid map[string]bool) int {
+	if len(toolNames) == 0 {
+		return 0
+	}
+	dir := filepath.Join(loader.AgentsDir(), memberID+".fwagent")
+	st, e := agentdb.Open(agentdb.Resolve(memberID, dir))
+	if e != nil {
+		return 0
+	}
+	defer st.Close()
+	n := 0
+	for _, tn := range toolNames {
+		tn = strings.TrimSpace(tn)
+		if tn == "" || !valid[tn] {
+			continue // cuma tool yg beneran ada (anti halu nama tool)
+		}
+		if st.SubscribeTool(tn, "ai-studio:team-data", "{}") != nil {
+			continue
+		}
+		n++
+		// subscribe != capability: app tool butuh GRANT app:<id> biar ke-expose + callable.
+		// appID di-extract dari Capability() = "app:<id>" (anti salah-parse nama tool ber-dash).
+		if t, ok := tools.Lookup(tn); ok {
+			if c := t.Capability(); strings.HasPrefix(c, "app:") {
+				_ = st.GrantApp(strings.TrimPrefix(c, "app:"))
+			}
+		}
+	}
+	return n
+}
+
 // architectSkillsDir — MUST match the router's brain.DynamicSkillsDir() so what the
 // architect authors is what the router injects: $FLOW_ROUTER_DATA/skills else
 // ~/.flow_router/skills. (Same machine; both default to ~/.flow_router/skills.)
@@ -264,12 +324,13 @@ func capGroupID(s string) string {
 // call. Only worker-side fields; the synth-side fields of its AgentSpec are filled
 // with defaults at assembly (each specialist contributes its -worker to the group).
 type teamWorker struct {
-	CategoryID string `json:"category_id"`
-	Name       string `json:"name"`
-	Icon       string `json:"icon"`
-	Role       string `json:"role"`
-	Persona    string `json:"persona"`
-	Directive  string `json:"directive"`
+	CategoryID string   `json:"category_id"`
+	Name       string   `json:"name"`
+	Icon       string   `json:"icon"`
+	Role       string   `json:"role"`
+	Persona    string   `json:"persona"`
+	Directive  string   `json:"directive"`
+	Tools      []string `json:"tools"` // nama tool data yg spesialis ini pakai (mis. app_flowalpha_get_price)
 }
 
 // teamLead — the synthesizer/lead that combines the workers' outputs.
@@ -301,7 +362,8 @@ func teamPlanSchema() map[string]any {
 			"icon":        map[string]any{"type": "string", "description": "1 emoji yang cocok."},
 			"role":        map[string]any{"type": "string", "description": "label peran singkat (mis. 'penafsir weton')."},
 			"persona":     map[string]any{"type": "string", "description": "persona/system-prompt specialist ini (keahlian + gaya). RINGKAS (1 keahlian fokus)."},
-			"directive":   map[string]any{"type": "string", "description": "cara kerja specialist. Kalau KREATIF/tradisi (ga butuh data real) bilang itu tugasnya; kalau ANALISIS suruh cari data."},
+			"directive":   map[string]any{"type": "string", "description": "cara kerja specialist. Kalau KREATIF/tradisi (ga butuh data real) bilang itu tugasnya; kalau ANALISIS/butuh DATA NYATA (harga/pasar/fakta) → WAJIB suruh PANGGIL tool dari field 'tools', HARAM ngarang angka."},
+			"tools":       map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "nama tool DATA yg spesialis ini pakai buat data NYATA — PILIH dari DAFTAR TOOL TERSEDIA di instruksi sistem (mis. app_flowalpha_get_price). Kosong [] kalau spesialis ga butuh data eksternal (kreatif/tradisi)."},
 		},
 		"required": []string{"category_id", "name", "icon", "role", "persona", "directive"},
 	}
@@ -340,8 +402,17 @@ func architectDesignTeam(ctx context.Context, prompt, model string) (teamPlan, e
 			"parameters":  teamPlanSchema(),
 		},
 	}
-	args, err := routerForcedTool(ctx, model,
-		"Lo arsitek TIM Flowork. Dari permintaan user, rancang group LENGKAP sekali jalan: pecah jadi 2-4 specialist (worker) yg saling melengkapi + 1 lead yg gabungin jadi 1 jawaban. Persona & directive sesuai domain. Bahasa Indonesia. RINGKAS (anti over-prompt).",
+	toolHint, _ := availableDataTools()
+	sysPrompt := "Lo arsitek TIM Flowork. Dari permintaan user, rancang group LENGKAP sekali jalan: " +
+		"pecah jadi 2-4 specialist (worker) yg saling melengkapi + 1 lead yg gabungin jadi 1 jawaban. " +
+		"Persona & directive sesuai domain. Bahasa Indonesia. RINGKAS (anti over-prompt)."
+	if toolHint != "" {
+		sysPrompt += "\n\nTOOL DATA NYATA TERSEDIA (buat spesialis yg butuh data live — harga/pasar/dll):\n" +
+			toolHint + "\nKalau tim butuh DATA NYATA, ISI field 'tools' tiap spesialis relevan dgn nama tool " +
+			"dari daftar ini, dan directive-nya WAJIB suruh PANGGIL tool itu — HARAM ngarang angka. " +
+			"Spesialis kreatif/tradisi: tools [] kosong."
+	}
+	args, err := routerForcedTool(ctx, model, sysPrompt,
 		"Bikin tim buat: "+prompt, tool, "design_team", 2500)
 	if err != nil {
 		return plan, err
@@ -505,6 +576,25 @@ func architectBuildFromPlan(ctx context.Context, host *kernelhost.Host, store *f
 	if cerr := groups.CreateGroup(plan.GroupID, plan.DisplayName, members, synthesizer, plan.Task); cerr != nil {
 		return nil, fmt.Errorf("create group: %w", cerr)
 	}
+	// Owner 2026-06-21: subscribe TOOL DATA ke tiap spesialis (post-install) → tim pakai data NYATA,
+	// BUKAN ngarang. aid di-re-derive (mirror architectAssembleTeamPack). Best-effort.
+	_, validTools := availableDataTools()
+	toolsWired, seenSub := 0, map[string]bool{}
+	for _, sp := range plan.Specialists {
+		if len(sp.Tools) == 0 {
+			continue
+		}
+		slug := strings.TrimPrefix(strings.ToLower(strings.TrimSpace(sp.CategoryID)), plan.GroupID+"-")
+		aid := plan.GroupID + "-" + slug
+		if len(aid) > 31 {
+			aid = strings.TrimRight(aid[:31], "-")
+		}
+		if slug == "" || seenSub[aid] {
+			continue
+		}
+		seenSub[aid] = true
+		toolsWired += subscribeMemberTools(aid, sp.Tools, validTools)
+	}
 	return map[string]any{
 		"ok":           true,
 		"group_id":     plan.GroupID,
@@ -512,6 +602,7 @@ func architectBuildFromPlan(ctx context.Context, host *kernelhost.Host, store *f
 		"task":         plan.Task,
 		"members":      members,
 		"synthesizer":  synthesizer,
+		"tools_wired":  toolsWired,
 		"chat":         fmt.Sprintf("POST /api/chat {\"agent\":%q,\"text\":\"...\"}", plan.GroupID),
 		"next":         "Team is live in the Group tab + Telegram slash menu. Chat it via the group id above.",
 	}, nil

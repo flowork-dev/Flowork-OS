@@ -85,7 +85,8 @@ const aiStudioTeamSchema = `{
       "icon": "1 emoji cocok",
       "role": "label peran singkat (mis. 'penafsir weton')",
       "persona": "persona/system-prompt specialist (keahlian + gaya), RINGKAS",
-      "directive": "cara kerja specialist. KREATIF/tradisi (ga butuh data real)=bilang itu tugasnya; ANALISIS=suruh cari data"
+      "directive": "cara kerja specialist. KREATIF/tradisi (ga butuh data real)=bilang itu tugasnya; ANALISIS/butuh DATA NYATA (harga/pasar/fakta)=WAJIB suruh PANGGIL tool dari 'tools', HARAM ngarang angka",
+      "tools": ["nama tool data dari DAFTAR TOOL TERSEDIA (mis. app_flowalpha_get_price) — [] kosong kalau ga butuh data eksternal"]
     }
   ],
   "lead": {
@@ -104,8 +105,13 @@ func aiStudioDesignTeam(ctx context.Context, host *kernelhost.Host, prompt strin
 		return plan, false
 	}
 	msg := "Rancang 1 TIM (group) Flowork LENGKAP buat permintaan ini:\n\n" + prompt +
-		"\n\nPecah jadi 2-4 specialist (worker) yg saling melengkapi + 1 lead (synthesizer). " +
-		"Balas HANYA objek JSON dgn field PERSIS skema berikut (isi sesuai domain, JANGAN salin " +
+		"\n\nPecah jadi 2-4 specialist (worker) yg saling melengkapi + 1 lead (synthesizer). "
+	if hint, _ := availableDataTools(); hint != "" {
+		msg += "\n\nTOOL DATA NYATA TERSEDIA (buat spesialis yg butuh data live — harga/pasar/dll):\n" +
+			hint + "\nKalau tim butuh DATA NYATA, ISI 'tools' tiap spesialis relevan dgn nama tool dari " +
+			"daftar ini + directive WAJIB suruh PANGGIL tool itu (HARAM ngarang angka). Kreatif/tradisi: tools []."
+	}
+	msg += "\n\nBalas HANYA objek JSON dgn field PERSIS skema berikut (isi sesuai domain, JANGAN salin " +
 		"deskripsi mentah; 'specialists' = array 2-4 objek):\n" + aiStudioTeamSchema
 	raw, err := host.InvokeAgentMessage(ctx, aiStudioID, msg, "ai-studio-team")
 	if err != nil {
