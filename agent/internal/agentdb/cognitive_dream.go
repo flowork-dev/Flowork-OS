@@ -7,6 +7,9 @@
 // Update 2026-06-21 (owner autonomy-grant "buka saja, lock lagi"): resolveNodeID + hook CO-REFERENCE
 //   (resolveCanonicalIdentity di file baru cognitive_coref.go) SEBELUM ResolveByEmbedding — fix
 //   fragmentasi identitas owner (bug ke-temu D21 benchmark). Additive, re-locked + build/vet/test green.
+// Update 2026-06-21 (owner-approved, Phase 3E/D13 loop-belajar): DigestDeps +SourceKind +SourceRef
+//   (override source_kind hasil ekstraksi, mis. 'strong_model_unverified' buat distil recording model
+//   kuat). Diterapin di node+edge (skOf/srcRef). Additive, re-locked. Extend = file baru (learning_feed.go).
 //
 // cognitive_dream.go — Cognitive Digestion orchestration, 2-TIER (roadmap §4.6, D16).
 //
@@ -41,6 +44,12 @@ type DigestDeps struct {
 	Embed      EmbedFunc // opsional (nil = fallback)
 	AgentScope string    // prefix URN, mis. "agent:mr-flow"
 	Tier       int       // 1 = light (→shadow), 2 = deep (gate + promote)
+	// SourceKind (3E/D13 loop-belajar): kalau diisi, OVERRIDE source_kind hasil ekstraksi
+	// (mis. "strong_model_unverified" buat distil dari recording model kuat). "" = pakai
+	// source_kind dari extractor (default 'agent_inferred'/'user_said').
+	SourceKind string
+	// SourceRef: penanda asal (default "digest"). 3E pakai "learning" biar bisa di-trace/audit.
+	SourceRef string
 }
 
 // DigestStats — hasil 1 pass (buat metrik QC).
@@ -66,6 +75,17 @@ func (s *Store) DigestText(ctx context.Context, text string, dep DigestDeps) (Di
 	if scope == "" {
 		scope = "agent:local"
 	}
+	srcRef := dep.SourceRef
+	if srcRef == "" {
+		srcRef = "digest"
+	}
+	// 3E/D13: override source_kind (mis. strong_model_unverified) kalau di-set.
+	skOf := func(extracted string) string {
+		if dep.SourceKind != "" {
+			return dep.SourceKind
+		}
+		return extracted
+	}
 
 	raw, err := dep.LLM(ctx, BuildExtractPrompt(text))
 	if err != nil {
@@ -90,7 +110,7 @@ func (s *Store) DigestText(ctx context.Context, text string, dep DigestDeps) (Di
 		node := CogNode{
 			ID: id, Label: n.Label, Type: n.Type, Why: n.Why, Who: n.Who,
 			WhereDomain: n.WhereDomain, WhenValid: n.WhenValid,
-			SourceKind: n.SourceKind, SourceRef: "digest", Confidence: n.Confidence,
+			SourceKind: skOf(n.SourceKind), SourceRef: srcRef, Confidence: n.Confidence,
 			Status: status, Embedding: emb,
 		}
 		if status == "quarantined" {
@@ -129,7 +149,7 @@ func (s *Store) DigestText(ctx context.Context, text string, dep DigestDeps) (Di
 		}
 		if uerr := s.UpsertEdge(CogEdge{
 			FromID: fromID, ToID: toID, RelationType: e.RelationType,
-			Confidence: e.Confidence, SourceKind: e.SourceKind, SourceRef: "digest", Status: status,
+			Confidence: e.Confidence, SourceKind: skOf(e.SourceKind), SourceRef: srcRef, Status: status,
 		}); uerr == nil {
 			st.EdgesAdded++
 		}

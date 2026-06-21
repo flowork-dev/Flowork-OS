@@ -2,6 +2,10 @@
 // Status: STABLE — DO NOT MODIFY without owner approval.
 // Owner: Aola Sahidin (Mr.Dev)
 // Repo: https://github.com/flowork-os/Flowork-OS
+// 2026-06-21 OWNER-APPROVED (Phase 3E/D13 loop-belajar): +route POST /api/agents/learning/digest
+//   (agentmgr.LearningDigestHandler) — distil recording model kuat → shadow → promote-on-repetisi.
+//   Gated FLOWORK_LEARN_LOOP=1 (default OFF). Logic di non-locked agentmgr/learning_feed.go +
+//   agentdb/learning_log.go. Additive, 1 baris route.
 // 2026-06-21 OWNER-APPROVED (AI-IN-AGENT mandate G1): +seedDreamDigester() & wire
 //   agentmgr.DigestLLMOverride = dreamDigestLLM(host) (deket seedCodemapEnricher/AIStudio)
 //   → reasoning CGM digest/extraction pindah dari host+model-global ke AGENT dream-digester
@@ -890,6 +894,7 @@ func main() {
 	// CGM digestion manual trigger (POST) — deploy proven loop (P1, 2026-06-20).
 	// Owner-controlled; always runs. Auto-digest in dream cron gated by env.
 	mux.HandleFunc("/api/agents/cognitive/digest", agentmgr.CognitiveDigestHandler)
+	mux.HandleFunc("/api/agents/learning/digest", agentmgr.LearningDigestHandler) // Phase 3E/D13 loop-belajar (gated FLOWORK_LEARN_LOOP=1)
 	mux.HandleFunc("/api/agents/compact", agentmgr.CompactAgentHandler) // auto-compact manual trigger (owner/QC)
 	mux.HandleFunc("/api/compact/config", agentmgr.CompactConfigHandler) // ambang auto-compact (GUI Settings)
 	mux.HandleFunc("/api/agents/compact-all", func(w http.ResponseWriter, r *http.Request) { // Compact All (menu Agent)
