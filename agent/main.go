@@ -2,6 +2,11 @@
 // Status: STABLE — DO NOT MODIFY without owner approval.
 // Owner: Aola Sahidin (Mr.Dev)
 // Repo: https://github.com/flowork-os/Flowork-OS
+// 2026-06-22 OWNER-APPROVED buka-lock (B4 auto-sync sumber→graph, re-locked): +1 baris
+//   ticker → SyncSourcesToGraph(ctx,host): projeksi skills/constitution/edu/drawer mr-flow
+//   ke cognitive graph (job non-beku graph_autosync.go), IDEMPOTENT + change-detection
+//   (skip embed kalau label SAMA → hemat router) + throttle 30min. Ganti re-run manual
+//   _scratch_cgm/graphsync. Additive + data-only (sumber ga diubah; graph cuma mirror). Re-locked.
 // 2026-06-21 OWNER-APPROVED buka-lock (D32 inc-1 error-edukasi-adaptif, re-locked): +1
 //   baris ticker → PromoteRecurringMistakes(ctx,host): mistake recurring (hit_count>=3)
 //   → project jadi recovery-instinct embedded (semantic-recallable) via job non-beku
@@ -621,6 +626,9 @@ func main() {
 					}
 					if n := PromoteRecurringMistakes(ctx, host); n > 0 { // D32: mistake recurring → recovery-instinct (embedded)
 						log.Printf("mistake-promote: %d → recovery-instinct", n)
+					}
+					if n := SyncSourcesToGraph(ctx, host); n > 0 { // B4: auto-sync sumber→graph (throttle 30min, change-detect)
+						log.Printf("graph-autosync: %d node sumber→graph diperbarui", n)
 					}
 				}()
 			}

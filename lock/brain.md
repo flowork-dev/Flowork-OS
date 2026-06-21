@@ -249,7 +249,7 @@ Router brain (`flowork-brain.sqlite`, shared 5jt) = sumber knowledge-base luas, 
 
 **D2. Auto-capture recovery (D32 INC-2) — `agent/agents/mr-flow/recovery_capture.go`:** logic-brain `captureRecovery`/`toolErrClass`/`recoveryCaptureSkip` DI-EKSTRAK dari main.go = realisasi PERTAMA pola granular §13.D (main.go = list/wiring EDITABLE, logic-brain = file terpisah FROZEN). Tool ERROR→tool SAMA SUKSES dalam loop → `mistake_log` → pipeline INC-1. Dipanggil 1 baris dari tool-loop main.go. FROZEN.
 
-**E. Loop non-beku yg NYENTUH brain (boleh evolve tapi hati2):** `dream_digester_seed.go` · `mistake_promote_job.go` · `learning_feed.go`/`agentdb/learning_log.go` · `agentmgr/cognitive_digest_cron.go`.
+**E. Loop non-beku yg NYENTUH brain (boleh evolve tapi hati2):** `dream_digester_seed.go` · `mistake_promote_job.go` · `learning_feed.go`/`agentdb/learning_log.go` · `agentmgr/cognitive_digest_cron.go` · `graph_autosync.go` (B4 auto-sync sumber→graph, ticker host + change-detection; soft-lock, kandidat freeze).
 
 **F. GUI — ⛔ TIDAK di-freeze (owner 2026-06-22):** `web/tabs/cognitive.js` + `agentmgr/cognitive_handlers.go` = jalur GUI/viz (warna/legend/filter masih EVOLVE). **Jangan dikunci** — biar bebas berkembang.
 
