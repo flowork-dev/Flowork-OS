@@ -2,6 +2,11 @@
 // Status: STABLE — DO NOT MODIFY without owner approval.
 // Owner: Aola Sahidin (Mr.Dev)
 // Repo: https://github.com/flowork-os/Flowork-OS
+// 2026-06-21 OWNER-APPROVED buka-lock (Phase 6/E async opsi-1, re-locked): +1 baris di
+//   ticker poller (deket RunDueWakeups) → RunQueuedTasks(ctx,host) drive task background
+//   (state 'queued', di-set TaskCreate background:true) ASYNC via worker non-beku
+//   task_worker.go. Kernel TIDAK disentuh; mirror pola wakeup. Additive + DORMANT (tanpa
+//   task queued = no-op). Re-locked.
 // 2026-06-21 OWNER-APPROVED (Phase 3E/D13 loop-belajar): +route POST /api/agents/learning/digest
 //   (agentmgr.LearningDigestHandler) + AUTO-TRIGGER ticker 30 menit (goroutine, per-tick recover)
 //   → distil recording model kuat (capture real-time di ROUTER, toggle GUI) → shadow → promote-on-
@@ -604,6 +609,9 @@ func main() {
 					trigEngine.Tick(ctx)                      // ROADMAP 3: proses aturan trigger poll (time/file-watch/…)
 					if n := RunDueWakeups(ctx, host); n > 0 { // ScheduleWakeup: fire one-shot wakeup yang due
 						log.Printf("wakeup: %d di-fire", n)
+					}
+					if n := RunQueuedTasks(ctx, host); n > 0 { // E (Phase 6): drive task background (queued) async
+						log.Printf("queued-task: %d di-drive", n)
 					}
 				}()
 			}

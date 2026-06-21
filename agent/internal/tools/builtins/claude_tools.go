@@ -3,6 +3,12 @@
 // Owner: Aola Sahidin (Mr.Dev)
 // Repo: https://github.com/flowork-os/Flowork-OS
 // Locked at: 2026-06-14
+// MODIFIED 2026-06-21 (owner-approved buka-lock, re-locked): Phase 6/E opsi-1 —
+//   TaskCreate +param `background`. background:true + ada prompt → state 'queued'
+//   (bukan 'pending') → di-drive ASYNC oleh worker non-beku RunQueuedTasks
+//   (task_worker.go, package main). Ini EVOLUSI tool task yg udah ada (BUKAN nambah
+//   tool surface baru) → modify in-place wajar. Additive: default false = perilaku
+//   lama (state 'pending', drive sendiri). Re-locked.
 // Reason: 10 surface-vocabulary tools VERIFIED via mr-flow (/api/chat, bukti =
 //   tool_invocations + DB): TaskCreate/Output/Update/Stop, ScheduleWakeup,
 //   Workflow, StructuredOutput JALAN; PowerShell/Monitor/SendUserFile dispatch
@@ -214,12 +220,13 @@ func (taskCreateTool) Name() string       { return "TaskCreate" }
 func (taskCreateTool) Capability() string { return "state:write" }
 func (taskCreateTool) Schema() tools.Schema {
 	return tools.Schema{
-		Description: "Record a task in this agent's durable task ledger and get a task_id. Note: the kernel runs synchronously, so this REGISTERS the task (subject/prompt/status) for tracking — it does not spawn a parallel background agent. Drive execution yourself, then TaskUpdate/TaskStop and read TaskOutput.",
+		Description: "Record a task in this agent's durable task ledger and get a task_id. By default the kernel is synchronous so this just REGISTERS the task (drive it yourself, then TaskUpdate/TaskStop, read TaskOutput). Set background:true WITH a prompt to run it ASYNC instead — a bounded non-frozen worker drives the prompt itself and notifies the owner when done (fire-and-forget).",
 		Params: []tools.Param{
 			{Name: "subject", Type: tools.ParamString, Description: "short task subject/title", Required: true},
 			{Name: "description", Type: tools.ParamString, Description: "what the task is"},
 			{Name: "activeForm", Type: tools.ParamString, Description: "present-tense label shown while running"},
-			{Name: "prompt", Type: tools.ParamString, Description: "the instruction/prompt for the task"},
+			{Name: "prompt", Type: tools.ParamString, Description: "the instruction/prompt for the task (required if background:true)"},
+			{Name: "background", Type: tools.ParamBool, Description: "run async in the background (fire-and-forget): a bounded non-frozen worker drives the prompt, marks the task done, and notifies the owner. Default false = just record (drive yourself)."},
 		},
 		Returns: "{task_id, status, subject}",
 	}
@@ -252,12 +259,19 @@ func (taskCreateTool) Run(ctx context.Context, args map[string]any) (tools.Resul
 	}
 	cp, _ := json.Marshal(meta)
 	now := time.Now().UTC().Format(time.RFC3339)
+	// background:true + ada prompt → state 'queued' = di-drive ASYNC oleh worker
+	// non-beku RunQueuedTasks (task_worker.go). Tanpa prompt ga bisa di-drive → tetap
+	// 'pending' (drive sendiri). Default false = perilaku lama.
+	state := "pending"
+	if bg, _ := args["background"].(bool); bg && strings.TrimSpace(argStr(args, "prompt")) != "" {
+		state = "queued"
+	}
 	if _, err := db.Exec(
-		"INSERT OR REPLACE INTO agent_runs (id,label,state,checkpoint,updated) VALUES (?,?, 'pending', ?, ?)",
-		id, subject, string(cp), now); err != nil {
+		"INSERT OR REPLACE INTO agent_runs (id,label,state,checkpoint,updated) VALUES (?,?,?,?,?)",
+		id, subject, state, string(cp), now); err != nil {
 		return tools.Result{}, err
 	}
-	return tools.Result{Output: map[string]any{"task_id": id, "status": "pending", "subject": subject}}, nil
+	return tools.Result{Output: map[string]any{"task_id": id, "status": state, "subject": subject}}, nil
 }
 
 type taskUpdateTool struct{}
