@@ -32,20 +32,9 @@
 //   graph_recall(pesan, budget 2800) + brain_search → inject fakta relevan ke Tier-3
 //   (paling salient) dgn directive TEGAS. Akar: brain/graph dulu cuma tool-driven →
 //   model lemah ga manggil → "gak punya data" walau fakta ADA. Sekarang fakta owner
-//   auto-nongol → recall produksi RELIABLE (terbukti via fakta personal: kondisi/anak/
-//   finansial/asal — DI-REDACT dari komentar repo per D8; math control no over-anchor).
-//   Model tetap cfg.Router.Model (GUI, ga hardcode). wasm rebuilt (wasip1). Re-locked.
-//   [D8 2026-06-21: nama-anak/angka/lokasi personal owner dicabut dari komentar ini — privasi repo publik.]
-// 2026-06-21 (owner-approved K10, D31 Harness-Agility): prompt budget MODEL-AWARE.
-//   Akar: maxPersonaTotalChars=9000 itu cap buat LLM LOKAL (flowork-brain ctx 32k);
-//   pas owner switch ke Opus/cloud (ctx 200k-1M) lewat GUI, cap sama nyekik → persona+
-//   recall+memory rebutan 9000ch (zero-sum) → ke-truncate paksa (terukur: prompt ~12.4k
-//   + recall 2.8k → buang ~6.2k char = separuh). Fix: personaBudget(model) skala kapasitas
-//   (lokal 9000 NO-regresi / cloud 48000); memory & recall (graph/brain) juga model-aware
-//   lega buat cloud; truncBudget() rune-safe (cabut-akar bug s[:n] split multibyte→UTF-8
-//   invalid). +1 baris stderr observability (D24). isCloudModel heuristik nama, default
-//   KETAT (unknown→lokal). Logic VERIFIED: _scratch_cgm/d31_budget_check.go ALL PASS.
-//   wasip1 build green. Re-locked.
+//   auto-nongol → recall produksi RELIABLE (terbukti: paralysis→Lumpuh, anak→Adrian/
+//   Arkana/Shanon, scam→$1.25M, math control tetap bener/no over-anchor). Model tetap
+//   cfg.Router.Model (GUI, ga hardcode). wasm rebuilt (wasip1). Re-locked.
 // Locked at: 2026-05-30
 // Reason: Mr.Flow WASM agent (CRITICAL). Audit pass:
 //   - Token + TELEGRAM_ALLOWED_CHATS validation (drop kalau invalid)
@@ -154,19 +143,10 @@ const (
 	maxMsgContentChars   = 6000 // cap per-message content sebelum kirim ke LLM
 	keepToolResultsFull  = 4    // hasil tool terbaru yang TIDAK di-prune (sisanya diringkas)
 	maxSkillCharsPerItem = 300  // truncate instruction skill kalau terlalu panjang
-	maxPersonaTotalChars = 9000 // hard cap system prompt total (3-tier + memory snapshot) — LOKAL/model kecil
-	// D31 Harness-Agility (owner 2026-06-21): budget MODEL-AWARE. Cap 9000 itu buat LLM
-	// LOKAL (flowork-brain, ctx 32k, lemah → over-prompt nyakitin). Pas owner ganti ke
-	// model cloud (Opus/Sonnet/Haiku, ctx 200k-1M) lewat GUI, cap sama nyekik konteks →
-	// persona+recall+memory rebutan 9000ch (zero-sum) → ke-truncate paksa. Fix: budget
-	// skala kapasitas model. Cloud = lega; lokal tetap 9000 (NO regresi). Lihat personaBudget().
-	maxPersonaTotalCharsCloud = 48000 // cloud big-ctx: ~12k token, trivial buat 200k+; headroom gede
+	maxPersonaTotalChars = 9000 // hard cap system prompt total (3-tier + memory snapshot)
 	// Fase 1 phase-2: memory snapshot capped (per roadmap ~USER 500tok / MEMORY 800tok).
-	memUserCap    = 2000 // cap USER.md inject (~500 token approx) — lokal
-	memProjectCap = 3200 // cap MEMORY.md inject (~800 token approx) — lokal
-	// D31: memory cap lebih lega buat model cloud (konteks owner lebih utuh).
-	memUserCapCloud    = 6000  // cap USER.md inject — cloud (~1.5k token)
-	memProjectCapCloud = 12000 // cap MEMORY.md inject — cloud (~3k token)
+	memUserCap    = 2000 // cap USER.md inject (~500 token approx)
+	memProjectCap = 3200 // cap MEMORY.md inject (~800 token approx)
 	// Fase 1 phase-2: context compression — ringkas blok tengah kalau history gede.
 	compressTriggerChars = 20000 // total content history > ini → trigger compress (~5k token)
 	compressKeepTail     = 8     // jumlah pesan terakhir yang DISISAKAN utuh (TAIL)
@@ -651,24 +631,18 @@ func callLLM(cfg agentConfig, userText string, history []chatTurn, notifyChatID 
 	// AUTO-RECALL (D18/D19): inject grounding memori relevan pesan ini di BAWAH sys
 	// (paling salient) → recall produksi RELIABLE tanpa gantung LLM manggil tool. Jaga
 	// blok recall ga ke-potong budget: cap bagian persona dulu, recall nempel utuh.
-	budget := personaBudget(cfg.Router.Model) // D31: skala kapasitas model (lokal 9000 / cloud 48000)
-	rawLen := len(sys)
-	if recall := fetchAutoRecall(userText, cfg.Router.Model); recall != "" {
+	if recall := fetchAutoRecall(userText); recall != "" {
 		recall = "\n=== RECALL OTOMATIS (relevan pesan terakhir) ===\n" + recall
-		if sb := budget - len(recall); len(sys) > sb {
-			if sb < 0 {
-				sb = 0
+		if budget := maxPersonaTotalChars - len(recall); len(sys) > budget {
+			if budget < 0 {
+				budget = 0
 			}
-			sys = truncBudget(sys, sb) + "\n…[truncated to respect prompt budget]"
+			sys = sys[:budget] + "\n…[truncated to respect prompt budget]"
 		}
 		sys += recall
-	} else if len(sys) > budget {
-		sys = truncBudget(sys, budget) + "\n…[truncated to respect prompt budget]"
+	} else if len(sys) > maxPersonaTotalChars {
+		sys = sys[:maxPersonaTotalChars] + "\n…[truncated to respect prompt budget]"
 	}
-	// D31 observability: ukur prompt sizing (model + budget + truncation) → owner bisa
-	// audit "kenapa konteks ke-potong" (D24). 1 baris stderr, murah.
-	fmt.Fprintf(os.Stderr, "[%s] prompt-budget model=%s cloud=%v raw=%d budget=%d final=%d\n",
-		selfID(), cfg.Router.Model, isCloudModel(cfg.Router.Model), rawLen, budget, len(sys))
 
 	// Bangun messages: system + history (history SUDAH termasuk pesan user
 	// terakhir; kalau kosong fallback ke userText). msgs pakai any biar muat
@@ -940,48 +914,7 @@ func capStr(s string, n int) string {
 	if len(s) <= n {
 		return s
 	}
-	return truncBudget(s, n) + "…"
-}
-
-// truncBudget — potong s ke <=n byte TAPI di batas rune (anti split multibyte →
-// jangan pernah kirim UTF-8 invalid ke LLM). Cabut-akar: `s[:n]` mentah bisa motong
-// di tengah karakter (mis. teks recall/memory non-ASCII). No import (bitmask).
-func truncBudget(s string, n int) string {
-	if n <= 0 {
-		return ""
-	}
-	if len(s) <= n {
-		return s
-	}
-	// mundur selama s[n] = byte lanjutan UTF-8 (0x80..0xBF) → berhenti di rune start.
-	for n > 0 && s[n]&0xC0 == 0x80 {
-		n--
-	}
-	return s[:n]
-}
-
-// isCloudModel — true kalau model = cloud big-context (boleh konteks lega). Default
-// KETAT (false) buat unknown/lokal biar model kecil ga over-prompt (doktrin asli).
-// Heuristik nama (bias aman). Future: ctx-window dari metadata router. D31.
-func isCloudModel(model string) bool {
-	m := strings.ToLower(strings.TrimSpace(model))
-	if m == "" || strings.Contains(m, "flowork-brain") || strings.Contains(m, "local") {
-		return false
-	}
-	for _, c := range []string{"opus", "sonnet", "haiku", "claude", "gpt", "gemini", "grok", "o1-", "o3-", "o4-"} {
-		if strings.Contains(m, c) {
-			return true
-		}
-	}
-	return false
-}
-
-// personaBudget — hard cap system prompt total, skala kapasitas model (D31).
-func personaBudget(model string) int {
-	if isCloudModel(model) {
-		return maxPersonaTotalCharsCloud
-	}
-	return maxPersonaTotalChars
+	return s[:n] + "…"
 }
 
 // fetchMemoryValue — baca tool_memory by key via runTool(memory_get). Dipakai
@@ -1014,7 +947,7 @@ func fetchMemoryValue(key string) string {
 //   - brain_search (verbatim FTS) — pengalaman/knowledge yang ke-simpan.
 //
 // Best-effort & non-fatal: kosong/error → "" (turn jalan normal, ga blok).
-func fetchAutoRecall(userText, model string) string {
+func fetchAutoRecall(userText string) string {
 	q, _ := parseAutoCont(strings.TrimSpace(userText))
 	q = strings.TrimSpace(q)
 	if len([]rune(q)) < 3 {
@@ -1022,12 +955,6 @@ func fetchAutoRecall(userText, model string) string {
 	}
 	if r := []rune(q); len(r) > 400 {
 		q = string(r[:400])
-	}
-	// D31: recall lebih lega buat model cloud (ctx besar) — graph fact-sheet + brain
-	// hits lebih utuh; lokal tetap ketat (no over-prompt model kecil).
-	graphBudget, brainK, brainCap := 2800, 5, 320
-	if isCloudModel(model) {
-		graphBudget, brainK, brainCap = 6000, 8, 600
 	}
 	var b strings.Builder
 
@@ -1039,7 +966,7 @@ func fetchAutoRecall(userText, model string) string {
 			} `json:"output"`
 		} `json:"result"`
 	}
-	if json.Unmarshal([]byte(runTool("graph_recall", map[string]any{"query": q, "max_chars": graphBudget})), &gr) == nil {
+	if json.Unmarshal([]byte(runTool("graph_recall", map[string]any{"query": q, "max_chars": 2800})), &gr) == nil {
 		if fs := strings.TrimSpace(gr.Result.Output.FactSheet); fs != "" {
 			// Directive TEGAS (terbukti via test: directive lemah "pakai kalau relevan"
 			// bikin model lemah anggap opsional → fallback "gak punya data" walau
@@ -1062,15 +989,15 @@ func fetchAutoRecall(userText, model string) string {
 			} `json:"output"`
 		} `json:"result"`
 	}
-	if json.Unmarshal([]byte(runTool("brain_search", map[string]any{"query": q, "k": brainK})), &br) == nil {
+	if json.Unmarshal([]byte(runTool("brain_search", map[string]any{"query": q, "k": 5})), &br) == nil {
 		var lines []string
 		for _, h := range br.Result.Output.Hits {
 			c := strings.TrimSpace(h.Content)
 			if c == "" {
 				continue
 			}
-			if r := []rune(c); len(r) > brainCap {
-				c = string(r[:brainCap]) + "…"
+			if r := []rune(c); len(r) > 320 {
+				c = string(r[:320]) + "…"
 			}
 			lines = append(lines, "- "+c)
 		}
@@ -1170,12 +1097,8 @@ func buildSystemPrompt(cfg agentConfig) string {
 	} else if n > 0 {
 		b.WriteString(fmt.Sprintf("[CREW LIVE: %d kategori aktif — cek `task_list` buat id valid sebelum task_run.]\n", n))
 	}
-	uCap, pCap := memUserCap, memProjectCap
-	if isCloudModel(cfg.Router.Model) { // D31: konteks owner lebih utuh buat model cloud
-		uCap, pCap = memUserCapCloud, memProjectCapCloud
-	}
-	usr := capStr(fetchMemoryValue("USER.md"), uCap)
-	proj := capStr(fetchMemoryValue("MEMORY.md"), pCap)
+	usr := capStr(fetchMemoryValue("USER.md"), memUserCap)
+	proj := capStr(fetchMemoryValue("MEMORY.md"), memProjectCap)
 	if usr != "" {
 		b.WriteString("[INGATAN tentang Mr.Dev (USER.md)]:\n" + usr + "\n")
 	}

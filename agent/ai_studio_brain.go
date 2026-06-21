@@ -5,13 +5,6 @@ package main
 // prompt+skema → agent balas SPEC JSON → engine deterministik (coder.go) yg rakit/install. Pola
 // PERSIS codemap_semantic.go (enrich via agent + fallback routerChat). Fallback WAJIB: kalau agent
 // ga ke-load / JSON invalid → coderDesignSpec lama (forced-tool routerChat). Robust, ga mecahin coder.
-//
-// D31 Harness-Agility (owner 2026-06-21): reason-first. Prompt per-call ga lagi maksa "JSON only".
-// v1 (permit "boleh nalar") TERBUKTI tak cukup — Opus tetap loncat ke JSON polos (test pantun+UMKM,
-// 0 reasoning). v2: designReasoningDirective() DIRECTED + gated model: model KUAT (cloud/Opus) WAJIB
-// nalar 2-4 kalimat dulu (bongkar "isi formulir" #4), model LEMAH (flowork-brain) tetap tight JSON
-// (nalar bebas bikin lokal ngaco). Parse extractDesignJSON (fence/last-balanced, robust ke reasoning)
-// GANTI jsonSlice. Persona di ai_studio_seed.go (permit). Fallback forced-tool tetap (json invalid).
 
 import (
 	"context"
@@ -23,72 +16,6 @@ import (
 	"flowork-gui/internal/kernel/loader"
 	"flowork-gui/internal/kernelhost"
 )
-
-// isCloudModel — true kalau model = cloud big-context/strong (Opus/Sonnet/Haiku/GPT/Gemini).
-// Default KETAT (false) buat lokal (flowork-brain) / unknown. D31: dipakai gate "directed
-// reasoning" — model KUAT didorong nalar dulu (desain lebih dalam); model LEMAH tetap tight
-// JSON (nalar bebas malah bikin lokal ngaco → andelin struktur). Mirror agents/mr-flow.
-func isCloudModel(model string) bool {
-	m := strings.ToLower(strings.TrimSpace(model))
-	if m == "" || strings.Contains(m, "flowork-brain") || strings.Contains(m, "local") {
-		return false
-	}
-	for _, c := range []string{"opus", "sonnet", "haiku", "claude", "gpt", "gemini", "grok", "o1-", "o3-", "o4-"} {
-		if strings.Contains(m, c) {
-			return true
-		}
-	}
-	return false
-}
-
-// designReasoningDirective — instruksi per-call. Model KUAT (cloud): WAJIB nalar dulu (bukan cuma
-// boleh) → bongkar kebiasaan "isi formulir" yg owner keluhin (D31 #4). Model LEMAH: tight JSON.
-func designReasoningDirective(model string) string {
-	if isCloudModel(model) {
-		return "PIKIR DULU (WAJIB, 2-4 kalimat): apa maksud & kebutuhan owner sebenernya, kenapa " +
-			"struktur/peran/tool ini yang paling pas, trade-off yang lo timbang. JANGAN langsung " +
-			"loncat ke JSON — nalar dulu itu yang bikin desain bener. SETELAH itu keluarkan SATU blok ```json"
-	}
-	return "Keluarkan SATU blok ```json"
-}
-
-// extractDesignJSON — ambil objek JSON SPEC dari reply agent yang BOLEH ngandung reasoning
-// (D31 reason-first). Robust: (1) kalau ada code-fence ```...``` ambil isi fence TERAKHIR; (2) lalu
-// ambil objek {...} balanced TERAKHIR (scan mundur dari '}' terakhir, hitung kedalaman) — jadi
-// reasoning yang ngandung '{' di depan ga ke-ikut. Fallback ke string apa-adanya. SENGAJA bukan
-// jsonSlice (dipakai codemap_semantic juga) biar ga regresi pemakai lain.
-func extractDesignJSON(s string) string {
-	s = strings.TrimSpace(s)
-	// (1) isi code-fence terakhir, kalau ada.
-	if i := strings.LastIndex(s, "```"); i >= 0 {
-		if j := strings.LastIndex(s[:i], "```"); j >= 0 {
-			inner := s[j+3 : i]
-			if nl := strings.IndexByte(inner, '\n'); nl >= 0 { // buang label bahasa (```json)
-				inner = inner[nl+1:]
-			}
-			if t := strings.TrimSpace(inner); strings.Contains(t, "{") {
-				s = t
-			}
-		}
-	}
-	// (2) objek balanced TERAKHIR.
-	end := strings.LastIndex(s, "}")
-	if end < 0 {
-		return s
-	}
-	depth := 0
-	for i := end; i >= 0; i-- {
-		switch s[i] {
-		case '}':
-			depth++
-		case '{':
-			if depth--; depth == 0 {
-				return s[i : end+1]
-			}
-		}
-	}
-	return s
-}
 
 // aiStudioModel — model GUI per-agent ai-studio (kv router_model). Path .fwagent BENER (pola sama
 // enricherModel/evoCoderModel) — JANGAN Resolve(id,"") (itu salah path → ke-report flowork-brain
@@ -127,14 +54,13 @@ func aiStudioDesignAgent(ctx context.Context, host *kernelhost.Host, task string
 		return spec, "", false
 	}
 	prompt := "Rancang 1 app task Flowork (crew: 1 worker + 1 synthesizer) buat permintaan ini:\n\n" +
-		task + "\n\n" + designReasoningDirective(aiStudioModel()) +
-		" dgn field PERSIS skema berikut (isi tiap field sesuai domain app, JANGAN salin deskripsi mentah; " +
-		"yang dibaca host = blok json TERAKHIR):\n" + aiStudioCoderSchema
+		task + "\n\nBalas HANYA objek JSON dgn field PERSIS skema berikut (isi tiap field sesuai " +
+		"domain app, JANGAN salin deskripsi mentah):\n" + aiStudioCoderSchema
 	raw, err := host.InvokeAgentMessage(ctx, aiStudioID, prompt, "ai-studio-coder")
 	if err != nil {
 		return spec, "", false
 	}
-	if e := json.Unmarshal([]byte(extractDesignJSON(extractReply(raw))), &spec); e != nil {
+	if e := json.Unmarshal([]byte(jsonSlice(extractReply(raw))), &spec); e != nil {
 		return spec, "", false
 	}
 	spec.CategoryID = strings.ToLower(strings.TrimSpace(spec.CategoryID))
@@ -185,14 +111,13 @@ func aiStudioDesignTeam(ctx context.Context, host *kernelhost.Host, prompt strin
 			hint + "\nKalau tim butuh DATA NYATA, ISI 'tools' tiap spesialis relevan dgn nama tool dari " +
 			"daftar ini + directive WAJIB suruh PANGGIL tool itu (HARAM ngarang angka). Kreatif/tradisi: tools []."
 	}
-	msg += "\n\n" + designReasoningDirective(aiStudioModel()) + " dgn field PERSIS skema berikut (isi sesuai " +
-		"domain, JANGAN salin deskripsi mentah; 'specialists' = array 2-4 objek; yang dibaca host = blok json TERAKHIR):\n" +
-		aiStudioTeamSchema
+	msg += "\n\nBalas HANYA objek JSON dgn field PERSIS skema berikut (isi sesuai domain, JANGAN salin " +
+		"deskripsi mentah; 'specialists' = array 2-4 objek):\n" + aiStudioTeamSchema
 	raw, err := host.InvokeAgentMessage(ctx, aiStudioID, msg, "ai-studio-team")
 	if err != nil {
 		return plan, false
 	}
-	if e := json.Unmarshal([]byte(extractDesignJSON(extractReply(raw))), &plan); e != nil {
+	if e := json.Unmarshal([]byte(jsonSlice(extractReply(raw))), &plan); e != nil {
 		return plan, false
 	}
 	plan.GroupID = strings.ToLower(strings.TrimSpace(plan.GroupID))
