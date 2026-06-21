@@ -1376,16 +1376,6 @@ done &lt; my_knowledge.jsonl</pre>
             <button data-mc-action="status" class="text-sm px-3 py-1.5 rounded border border-slate-500/40 hover:bg-slate-700/50">Status</button>
           </div>
           <div id="mc-localai-out" class="text-xs font-mono p-2 bg-slate-900/60 rounded mb-3 min-h-[2rem]"></div>
-          <div class="flex flex-col gap-2 mb-3 border-t border-slate-700/50 pt-3">
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" id="localaiAutostart" onchange="toggleLocalaiAutostart()" class="w-4 h-4 accent-purple-500">
-              <span class="text-sm text-slate-300">Auto-start local AI (flowork-brain) on router boot</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" id="learnCapture" onchange="toggleLearnCapture()" class="w-4 h-4 accent-emerald-500">
-              <span class="text-sm text-slate-300">Loop-belajar: rekam pengalaman model kuat → brain (auto-capture, lokal)</span>
-            </label>
-          </div>
           <div class="text-xs uppercase tracking-wider text-slate-500 mb-2">Registry</div>
           <div id="mc-localai-models" class="space-y-1 max-h-32 overflow-y-auto"></div>
         </div>
@@ -1455,6 +1445,17 @@ done &lt; my_knowledge.jsonl</pre>
           <div class="flex items-center gap-3 mt-4 pt-3 border-t border-purple-900/30">
             <input type="checkbox" id="rtkTokenSaverFld" data-i18n-tip="tipf.rtkTokenSaverFld" name="rtkTokenSaver" class="w-4 h-4 accent-purple-500" />
             <label for="rtkTokenSaverFld" class="text-sm text-slate-300" data-i18n="lbl.rtk">RTK Token Saver — compress large tool results before forwarding</label>
+          </div>
+          <div class="mt-4 pt-3 border-t border-purple-900/30 space-y-2">
+            <div class="text-xs uppercase tracking-wider text-emerald-400/70 mb-1">Local AI &amp; Loop-belajar (3E)</div>
+            <div class="flex items-center gap-3">
+              <input type="checkbox" id="localaiAutostart" onchange="toggleLocalaiAutostart()" class="w-4 h-4 accent-purple-500" />
+              <label for="localaiAutostart" class="text-sm text-slate-300">Auto-start local AI (flowork-brain) saat router boot</label>
+            </div>
+            <div class="flex items-center gap-3">
+              <input type="checkbox" id="learnCapture" onchange="toggleLearnCapture()" class="w-4 h-4 accent-emerald-500" />
+              <label for="learnCapture" class="text-sm text-slate-300">Loop-belajar — rekam pengalaman model KUAT (cloud) → brain lokal (auto-capture). Model di-set di "Default Model" / Providers.</label>
+            </div>
           </div>
           <div class="mt-4 pt-3 border-t border-purple-900/30">
             <div class="flex items-center gap-3 mb-2">
