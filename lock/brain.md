@@ -137,6 +137,7 @@ Ada **3 jalur** node bisa lahir di `cognitive_nodes`:
 
 ## 7. AUTO-RECALL (inti "kenal owner") — file `agent/agents/mr-flow/main.go` (fungsi `fetchAutoRecall`)
 - `fetchAutoRecall(userText)` di-panggil TIAP TURN → jalanin `graph_recall`(query=userText, budget 2800) + `brain_search`(query=userText, k=5) → inject fakta relevan ke **Tier-3** prompt + **directive TEGAS**.
+- **N1-C GATE (2026-06-22): skip recall pas pesan TRIVIAL.** Helper `isTrivialChat(q)` + set `trivialChatTokens` (sapaan/ack/filler) di awal `fetchAutoRecall` → return "" kalau SEMUA token pesan trivial ("halo"/"makasih bro") → `graph_recall` + `brain_search` GA jalan (hemat ~200-250 token + 2 tool-call/turn). KONSERVATIF: 1 kata substantif matahin gate → query identitas/relasi ("siapa gw") TETAP ke-recall (0 regresi; unit 30/30 + e2e dbgchat). main.go SENGAJA non-frozen → gate ikut editable di sini.
 - **2 directive (string di `b.WriteString`):**
   - graph: `[FAKTA TERVERIFIKASI tentang Mr.Dev... JAWAB pakai fakta ini & HUBUNGKAN fakta yang berkaitan. JANGAN bilang "gak punya data/inget" kalau bisa disimpulkan...]`. ("HUBUNGKAN" = biar model nyambungin fakta tersebar, mis. "X taught owner" + "owner uses Y" → "X guru Y owner".)
   - brain: `[FAKTA VERBATIM dari memori lo (drawer tersimpan) — JAWAB PAKAI INI. JANGAN bilang "gak tau / ga ada catatan" kalau jawabannya ADA di bawah]` (diperkuat 2026-06-22 biar model 26B ga ngabaikan drawer).

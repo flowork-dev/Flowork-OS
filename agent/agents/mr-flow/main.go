@@ -956,6 +956,48 @@ func fetchMemoryValue(key string) string {
 	return ""
 }
 
+// trivialChatTokens — kata sapaan/ack/filler yang ZERO nilai buat di-recall.
+// Dipakai gate auto-recall (N1-C): pesan yang SEMUA token-nya ada di sini ga butuh
+// fakta memori, jadi recall di-skip (hemat 2 tool-call graph+brain per turn).
+var trivialChatTokens = map[string]bool{
+	// sapaan
+	"halo": true, "hallo": true, "hai": true, "hi": true, "hello": true, "hey": true,
+	"hei": true, "woi": true, "oi": true, "pagi": true, "siang": true, "sore": true,
+	"malam": true, "selamat": true,
+	// terima kasih
+	"makasih": true, "makasi": true, "thanks": true, "thank": true, "thx": true,
+	"trims": true, "terima": true, "kasih": true, "ty": true, "tq": true,
+	// apresiasi / setuju
+	"mantap": true, "mantul": true, "keren": true, "sip": true, "oke": true, "ok": true,
+	"okay": true, "okey": true, "yoi": true, "noted": true, "baik": true, "beres": true,
+	"gas": true, "siap": true, "iya": true, "ya": true, "yup": true, "yep": true,
+	"yes": true, "betul": true, "bener": true, "good": true, "nice": true,
+	// filler / partikel
+	"bro": true, "bre": true, "bang": true, "min": true, "dong": true, "deh": true,
+	"sih": true, "nih": true, "kok": true, "banget": true, "banyak": true, "juga": true,
+	"aja": true, "lah": true, "yaa": true, "yaaa": true, "wkwk": true, "wkwkwk": true,
+	"haha": true, "hehe": true, "lol": true,
+}
+
+// isTrivialChat — true kalau q cuma sapaan/ack/filler (SEMUA token trivial).
+// KONSERVATIF: 1 kata substantif aja (mis. "siapa", "gw", "guru") matahin gate →
+// query sah spt "siapa gw" / "siapa guru gitar gw" TETAP ke-recall. Token = huruf
+// aja (emoji/tanda baca/angka di-buang), max 5 token (lebih = bukan sapaan murni).
+func isTrivialChat(q string) bool {
+	fields := strings.FieldsFunc(strings.ToLower(q), func(r rune) bool {
+		return r < 'a' || r > 'z'
+	})
+	if len(fields) == 0 || len(fields) > 5 {
+		return false
+	}
+	for _, w := range fields {
+		if !trivialChatTokens[w] {
+			return false
+		}
+	}
+	return true
+}
+
 // fetchAutoRecall — D18/D19 working-memory: rakit grounding memori OTOMATIS tiap
 // turn, GAK gantung LLM milih manggil tool. Akar fix recall produksi: SEBELUMNYA
 // brain & graph cuma tool-driven, jadi fakta owner sering ga nongol kalau model ga
@@ -971,6 +1013,11 @@ func fetchAutoRecall(userText string) string {
 	q, _ := parseAutoCont(strings.TrimSpace(userText))
 	q = strings.TrimSpace(q)
 	if len([]rune(q)) < 3 {
+		return ""
+	}
+	// N1-C gate: sapaan/ack/filler murni ("halo", "makasih bro") ga butuh fakta
+	// memori → skip recall, hemat 2 tool-call (graph_recall + brain_search) per turn.
+	if isTrivialChat(q) {
 		return ""
 	}
 	if r := []rune(q); len(r) > 400 {
