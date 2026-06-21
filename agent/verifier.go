@@ -290,7 +290,15 @@ func pluginVerifyHandler() http.HandlerFunc {
 		if r.URL.Query().Get("judge") == "1" {
 			ctx, cancel := context.WithTimeout(r.Context(), 200*time.Second)
 			defer cancel()
-			if jv, jerr := verifierJudge(ctx, coderModel(r.URL.Query().Get("model")), packAppDesc(raw)); jerr == nil {
+			// AI-IN-AGENT (owner 2026-06-21 G5): model judge dari AGENT app-judge (GUI,
+			// default haiku) — BUKAN global DefaultModelShared. Override ?model= dihormati.
+			jModel := r.URL.Query().Get("model")
+			if jModel == "" {
+				jModel = utilityAgentModel(appJudgeID)
+			} else {
+				jModel = coderModel(jModel)
+			}
+			if jv, jerr := verifierJudge(ctx, jModel, packAppDesc(raw)); jerr == nil {
 				resp["judge"] = jv
 			} else {
 				resp["judge_error"] = jerr.Error()

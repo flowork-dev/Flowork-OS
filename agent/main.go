@@ -623,6 +623,7 @@ func main() {
 	seedAIStudio()        // agent ai-studio: otak AI Studio (bikin agent/app/tim), model GUI — owner 2026-06-20
 	seedDreamDigester()   // agent dream-digester: otak CGM digest/extraction, model GUI — owner 2026-06-21 (AI-IN-AGENT)
 	agentmgr.DigestLLMOverride = dreamDigestLLM(host) // digest reasoning lewat agent (model GUI), bukan global
+	seedAppJudge()        // G5: agent app-judge (verifier adversarial), model GUI haiku — owner 2026-06-21 (AI-IN-AGENT)
 	// DB-DRIVEN SELF-HEAL (owner 2026-06-20 "pake db biar flexibel"): crew/category yg
 	// SEMUA member agent-nya udah dihapus (dir ga ada) = mati → auto-clean (cascade
 	// task_agents + trigger_rules). Realisasi "hapus agent → crew auto-ilang", lepas
