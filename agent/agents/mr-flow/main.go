@@ -43,6 +43,15 @@
 //   lemah ("[RECALL BRAIN]:") → model 26B ikut directive KUAT graph + ngabaikan drawer →
 //   "ga tau" walau fakta ADA (K11 miss). Fix: header brain disamain TEGAS ("JAWAB PAKAI
 //   INI, JANGAN bilang ga tau kalau ADA"). wasm rebuilt (wasip1). Re-locked.
+// 2026-06-22 (owner-approved): D32 INC-2 — AUTO-CAPTURE error→recovery (self-learning
+//   recovery instinct). Pas tool ERROR lalu tool yg SAMA SUKSES dalam loop turn ini =
+//   agent berhasil recover → mistake_log("WHEN <tool> <kelas> -> recovered"). TITLE
+//   stabil (tool+kelas) = dedup + hit_count; CONTENT "WHEN..->.." → recovery-instinct
+//   via PromoteRecurringMistakes (INC-1) pas hit≥3 (gerbang repetisi anti-degenerasi).
+//   Kelas error = bebas path/data owner (privasi D8). Hemat token: agent ga ngulang
+//   stuck yg udah ke-recover. Hook + helper SEMUA di main.go (NON-frozen); 0 file
+//   frozen disentuh; reuse penuh pipeline INC-1. Arsitektur: lock/brain.md +
+//   roadmap_brain.md #1. wasm rebuilt (tinygo). Re-locked.
 // Locked at: 2026-05-30
 // Reason: Mr.Flow WASM agent (CRITICAL). Audit pass:
 //   - Token + TELEGRAM_ALLOWED_CHATS validation (drop kalau invalid)
@@ -675,7 +684,8 @@ func callLLM(cfg agentConfig, userText string, history []chatTurn, notifyChatID 
 	toolSpecs := fetchToolSpecs()
 	ghostNudges := 0 // ghost-guard: berapa kali udah maksa model lanjut (anti narasi-tanpa-aksi)
 	loopStartMs := hostTimeNowMs()
-	budgetNudged := false // sekali aja kasih peringatan budget (biar model wrap-up/ScheduleWakeup)
+	budgetNudged := false            // sekali aja kasih peringatan budget (biar model wrap-up/ScheduleWakeup)
+	recovered := map[string]string{} // D32 INC-2: tool→kelas-error yg BELUM ke-recover (scope loop turn ini)
 	for iter := 0; iter < maxToolIters; iter++ {
 		// TIME-BOUND + AUTO-CONTINUE DETERMINISTIK (owner 2026-06-20: "loop jangan
 		// dibatasi, kerja seharian"). Loop jalan TERUS dalam budget waktu turn. Pas
@@ -810,11 +820,92 @@ func callLLM(cfg agentConfig, userText string, history []chatTurn, notifyChatID 
 		}
 		fmt.Fprintf(os.Stderr, "[%s] tool_call: %s args=%s\n", selfID(), tc.Function.Name, truncStr(tc.Function.Arguments, 120))
 		result := runTool(tc.Function.Name, args)
+		captureRecovery(tc.Function.Name, result, recovered) // D32 INC-2: error→sukses pada tool sama → recovery-instinct
 		msgs = append(msgs, map[string]any{
 			"role": "tool", "tool_call_id": id, "content": result,
 		})
 	}
 	return "(tool loop limit reached — coba lagi atau perjelas permintaan)"
+}
+
+// =============================================================================
+// D32 INC-2 — AUTO-CAPTURE error→recovery (self-learning recovery instinct).
+// Pas tool ERROR lalu tool yg SAMA SUKSES dalam loop turn ini = agent berhasil
+// recover → mistake_log. TITLE stabil (tool+kelas) = dedup + hit_count; CONTENT
+// format "WHEN..->.." = jadi recovery-instinct via PromoteRecurringMistakes (INC-1)
+// pas hit≥3 (gerbang repetisi anti-degenerasi). Kelas error BEBAS path/data owner
+// (privasi D8). Reuse pipeline INC-1 (mistake_log→promote). roadmap_brain.md #1.
+// =============================================================================
+
+// recoveryCaptureSkip — tool meta/recall/notify yg error→sukses-nya BUKAN "recovery"
+// bermakna (ga usah jadi instinct). Action tool (file/shell/task/codemap/web/...) di-capture.
+var recoveryCaptureSkip = map[string]bool{
+	"mistake_log": true, "graph_recall": true, "brain_search": true,
+	"brain_search_shared": true, "instinct_recall": true, "tool_search": true,
+	"telegram_send": true, "ScheduleWakeup": true, "now": true,
+	"memory_get": true, "interaction_recall": true,
+}
+
+// toolErrClass — hasil tool error host ({"error":...}) → KELAS error ringkas yg BEBAS
+// path/identifier owner. Sukses ({"ok":true}) / non-JSON (mis. teks file_read) → "".
+// TinyGo-safe (substring, no regexp).
+func toolErrClass(result string) string {
+	t := strings.TrimSpace(result)
+	if !strings.HasPrefix(t, "{") {
+		return ""
+	}
+	var m map[string]any
+	if json.Unmarshal([]byte(t), &m) != nil {
+		return ""
+	}
+	if ok, _ := m["ok"].(bool); ok {
+		return "" // sukses eksplisit
+	}
+	es, _ := m["error"].(string)
+	es = strings.ToLower(strings.TrimSpace(es))
+	if es == "" {
+		return ""
+	}
+	switch {
+	case strings.Contains(es, "not found"), strings.Contains(es, "no such"), strings.Contains(es, "tidak ada"), strings.Contains(es, "404"):
+		return "not-found"
+	case strings.Contains(es, "permission"), strings.Contains(es, "denied"), strings.Contains(es, "ditolak"):
+		return "permission"
+	case strings.Contains(es, "timeout"), strings.Contains(es, "timed out"), strings.Contains(es, "deadline"):
+		return "timeout"
+	case strings.Contains(es, "already exists"), strings.Contains(es, "sudah ada"):
+		return "already-exists"
+	case strings.Contains(es, "invalid"), strings.Contains(es, "parse"), strings.Contains(es, "syntax"), strings.Contains(es, "unmarshal"), strings.Contains(es, "required"):
+		return "invalid-input"
+	case strings.Contains(es, "dispatch"), strings.Contains(es, "tool http"), strings.Contains(es, "capability"), strings.Contains(es, "denied by cap"):
+		return "blocked"
+	default:
+		return "error"
+	}
+}
+
+// captureRecovery — lihat blok D32 INC-2 di atas. seen[tool] = kelas error tool yg
+// BELUM ke-recover dalam loop turn ini. Side-effect only (ga sentuh msgs/hasil).
+func captureRecovery(tool, result string, seen map[string]string) {
+	if recoveryCaptureSkip[tool] {
+		return
+	}
+	if cls := toolErrClass(result); cls != "" {
+		seen[tool] = cls // tool ini lagi error, tunggu apakah nanti sukses
+		return
+	}
+	cls, had := seen[tool]
+	if !had {
+		return // sukses tanpa error sebelumnya = bukan recovery
+	}
+	delete(seen, tool)
+	_ = runTool("mistake_log", map[string]any{
+		"category":       "workflow",
+		"title":          "recovery: " + tool + "/" + cls,
+		"content":        "WHEN " + tool + " gagal (" + cls + ") -> RECOVERED: agent berhasil di percobaan berikutnya (perbaiki argumen / ganti pendekatan).",
+		"context_origin": "auto-recovery",
+	})
+	fmt.Fprintf(os.Stderr, "[%s] D32 INC-2 recovery captured: %s/%s\n", selfID(), tool, cls)
 }
 
 // ghostNudgeMsg — koreksi deterministik pas model NARASI niat-aksi tanpa manggil
