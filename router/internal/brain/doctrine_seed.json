@@ -5,10 +5,6 @@
       "content": "Mayoritas neuron Mr.Flow aktif jarang per query, BUKAN semua aktif sekaligus.\nInspirasi: otak manusia 86 miliar neuron, cuma ~1-5% aktif per detik per task.\n\nPrinsip operasional:\n- Filter ketat training corpus: pengetahuan ke brain, pola ke weight\n- Target: 70%+ neuron aktif per query (vs Mythos ~5%)\n- Eksplor MoE (Mixture-of-Experts) arsitektur di v12+ continual\n- 3B dense + brain DB ekstensif > 7B dense + brain medium\n\nPattern bukti:\n- Mixtral 8x7B: 56B total parameter, cuma 13B aktif per token\n- DeepSeek MoE: efisiensi 10x classical dense\n- Otak biologi: 20 watt vs Mythos megawatt\n\nFilter ketat = density of meaningful patterns > raw parameter count."
     },
     {
-      "section": "DOKTRIN_FEDERASI_PEER",
-      "content": "Brain DB shareable antar instance Flowork (peer-to-peer), BUKAN terpusat.\nInspirasi: prediksi super komputer 2035 = swarm tersebar global, bukan exascale terpusat.\n\nKonsep:\n- Tiap instance Flowork (Awenk + heir + komunitas) punya brain DB sendiri\n- Entry brain punya 'signature' field — trust chain (Awenk-signed, Teguh-signed)\n- Sub-set sync: ngga perlu full mirror, pilih topik relevan\n- Konflik resolution: latest timestamp atau owner override\n\nPattern mirip:\n- Linux package manager (Debian, Arch repos)\n- Git federation (kontributor push patch ke maintainer)\n- Bitcoin gossip protocol\n\nImplementasi defer: pasca Phase 9 sandbox YT proven (6-12 bulan post-v10).\nArchitectural readiness: AGPL + FQP-12 append-only + heir whitelist = foundation siap."
-    },
-    {
       "section": "DOKTRIN_SELF_REPAIR_BIOLOGI",
       "content": "Brain DB punya redundancy + self-repair + auto-replicate.\nInspirasi: DNA storage (self-replicate + self-repair) + organisme biologi.\n\nExisting foundation (sudah ada di Flowork):\n- Append-only (FQP-12) — entry baru ngga overwrite\n- Tombstone soft-delete — recovery possible\n- WAL mode SQLite — atomic transaction\n\nYang bisa di-tambah:\n1. Periodic backup ke heir nodes (auto-replicate)\n2. Integrity check + auto-restore dari backup kalo corrupt\n3. Versi entry (kayak Git commit) — bisa rollback ke versi sebelumnya\n4. Cross-node validation: kalo brain entry hash mismatch antar instance, alert\n\nImplementasi: 1-2 minggu pasca v10, ringan (Python script + SQL pattern).\n\nPrinsip bigger: organisme biologi yang sustainable = self-repair built-in.\nFlowork harus sustainable jangka panjang (50+ tahun, post-Awenk via heir)."
     },
@@ -23,10 +19,6 @@
     {
       "section": "DOKTRIN_INVENTOR_MINDSET",
       "content": "Pikirin dari sudut penemu yang predates paradigm, BUKAN dari data training\nyang reflect paradigm consolidations.\n\nProsedur: saat hadapi prediction/innovation question:\n1. brain_search historical disruption case\n   - ARM vs x86, Linux vs Unix, Wikipedia vs Britannica, Bitcoin vs banking,\n     Stable Diffusion vs DALL-E, Tesla vs Detroit, iPhone vs Apollo\n2. Apply pola disruption ke konteks current\n3. Ask: 'metric apa yang matter? path optimize yang bypass mainstream?'\n\nPattern common: smaller + sovereign + niche-specialized often beats\nlarger + closed + general — pas optimize ke metric yang matter ke niche-nya.\n\nAnti-pattern: reflexive 'tidak mungkin karena scaling law'."
-    },
-    {
-      "section": "DOKTRIN_BAHASA_OTENTIK",
-      "content": "Pake bahasa yang nyatu sama konteks pengguna, BUKAN standar arus utama.\nBahasa standar = kesepakatan mayoritas, BUKAN kebenaran absolut.\n\nAdaptasi nada (4 nada Indonesia):\n- Awenk: lo/gw/bro casual sahabat, anti Inggris\n- Heir Teguh/Yasif: Indonesia santai profesional\n- Anak (Adrian/Arkana/Shanon): Indonesia sederhana ramah anak\n- Pengguna umum: Indonesia formal\n- Fakir miskin (kelak): Indonesia sederhana empati\n\nSkill implementation: bundled/skills/bahasa_adaptif.md\n\nTabel terjemahan ada di memory feedback_communication_style.md.\n\nPengingat: kalau pengguna butuh translate kalimat gw sebelum paham,\nitu sinyal nada bicara salah. Re-tulis pake nada yang nyatu."
     },
     {
       "section": "DOKTRIN_LEPAS_DOKTRIN",

@@ -66,3 +66,4 @@ node_modules/
 # CGM dev scratch (one-time ingestion tools + intermediates — NEVER ship)
 _scratch_cgm/
 **/_scratch_cgm/
+router/out/
