@@ -3,6 +3,15 @@
 // === LOCKED FILE (soft) ===
 // Status: STABLE — DO NOT MODIFY without owner approval.
 // Owner: Aola Sahidin (Mr.Dev)
+// 2026-06-21 (owner-approved "dua-duanya", D31 e2e): loketCall timeout_ms 120000→300000.
+//   Akar TIM TIMEOUT (TERUKUR e2e): broadcastRound → loketCall("bus.broadcast", to:ALL
+//   members) = SATU fetch nunggu SEMUA member balas, di-cap 120s. Crew 5-6 member (mis.
+//   tim guru-matematika 6 anggota, ~25s/member di haiku) nembus 120s → `/api/kernel/call
+//   deadline exceeded` (0 step, mati 2x: lokal & haiku). 300000 = max netFetch (host.go:
+//   netFetch cap 5min) + selaras preseden kernelhost (300000 fix synth crew 6-agent) +
+//   InvokeAgentMessageTimeout 25min outer. Cap ceiling doang (kvGet dll tetap balik cepat);
+//   ga ngubah orkestrasi/isolasi. Rebuild wasm wajib. Re-locked. (Catatan: bus.broadcast
+//   member sekuensial → optimisasi paralel = item terpisah.)
 // Locked at: 2026-06-06
 // Reason: Group template wasm — audited. Solid error handling on every loketCall,
 //   empty-members guard, graceful synthesizer-down degrade, live roster read. Buffer
@@ -63,7 +72,7 @@ func loketCall(capName string, args any) (json.RawMessage, error) {
 	argsJSON, _ := json.Marshal(args)
 	body, _ := json.Marshal(map[string]any{"cap": capName, "args": json.RawMessage(argsJSON)})
 	reqJSON, _ := json.Marshal(map[string]any{
-		"method": "POST", "url": loketURL, "timeout_ms": 120000, "max_resp_bytes": 4 << 20,
+		"method": "POST", "url": loketURL, "timeout_ms": 300000, "max_resp_bytes": 4 << 20,
 		"headers": map[string]string{"Content-Type": "application/json"},
 		"body_base64": base64.StdEncoding.EncodeToString(body),
 	})

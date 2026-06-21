@@ -2,6 +2,13 @@
 // === LOCKED FILE (soft) ===
 // Status: STABLE — DO NOT MODIFY without owner approval.
 // Owner: Aola Sahidin (Mr.Dev)
+// 2026-06-21 (owner-approved "dua-duanya", D31 e2e): groupManifest timeout_call_ms
+//   120000→300000. Akar: template group TERTINGGAL — preseden kernelhost.go (2026-06-03
+//   "timeout_call_ms=300000 fix synth crew 6-agent kena deadline") + InvokeAgentMessage
+//   udah 300s, TAPI groupManifest masih 120s → GROUP BARU 5-6 member (mis. tim guru-
+//   matematika 6 member) timeout `/api/kernel/call deadline exceeded` di ~120s (TERUKUR
+//   2x: lokal & haiku, 0 step). 300000 = max valid (manifest.go range 1-300000) + selaras
+//   InvokeAgentMessage. Cap doang, ga ngubah orkestrasi/roster/isolasi. Re-locked.
 // Locked at: 2026-06-06
 // Reason: Groups audit (GUI→logic). ConfigHandler error-swallow fixed — the old
 //
@@ -362,7 +369,7 @@ func groupManifest(id, display string) []byte {
 		"display_name": display, "min_kernel_version": "0.1.0",
 		"description": "GROUP (koloni semut): sebar tugas ke anggota lewat bus, synthesizer gabungin jadi 1 jawaban. Roster di-set di tab Group.",
 		"abi_version": 1, "author": "@flowork-os", "license": "MIT",
-		"entry": "agent.wasm", "memory_max_mb": 16, "timeout_call_ms": 120000,
+		"entry": "agent.wasm", "memory_max_mb": 16, "timeout_call_ms": 300000,
 		"capabilities_required": []string{
 			"net:fetch:http://127.0.0.1:1987/api/kernel/call", "state:read", "state:write", "time:read",
 		},
