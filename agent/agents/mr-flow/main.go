@@ -32,9 +32,12 @@
 //   graph_recall(pesan, budget 2800) + brain_search → inject fakta relevan ke Tier-3
 //   (paling salient) dgn directive TEGAS. Akar: brain/graph dulu cuma tool-driven →
 //   model lemah ga manggil → "gak punya data" walau fakta ADA. Sekarang fakta owner
-//   auto-nongol → recall produksi RELIABLE (terbukti: paralysis→Lumpuh, anak→Adrian/
-//   Arkana/Shanon, scam→$1.25M, math control tetap bener/no over-anchor). Model tetap
+//   auto-nongol → recall produksi RELIABLE (fakta personal owner ke-recall akurat;
+//   kontrol pertanyaan non-personal/math tetap bener, no over-anchor). Model tetap
 //   cfg.Router.Model (GUI, ga hardcode). wasm rebuilt (wasip1). Re-locked.
+// 2026-06-21 (owner-approved): PRIVACY D8 — cabut data personal owner dari komentar
+//   (changelog AUTO-RECALL di atas + contoh recall di fetchAutoRecall) jadi pola umum,
+//   anti-bocor ke repo publik. Comment-only (ga ngubah runtime/wasm). Re-locked.
 // Locked at: 2026-05-30
 // Reason: Mr.Flow WASM agent (CRITICAL). Audit pass:
 //   - Token + TELEGRAM_ALLOWED_CHATS validation (drop kalau invalid)
@@ -971,8 +974,8 @@ func fetchAutoRecall(userText string) string {
 			// Directive TEGAS (terbukti via test: directive lemah "pakai kalau relevan"
 			// bikin model lemah anggap opsional → fallback "gak punya data" walau
 			// faktanya ke-inject; directive tegas + "hubungkan" bikin model nyambungin
-			// fakta tersebar jadi jawaban benar — mis. "Irin taught Aola" + "Aola uses
-			// Guitar" → "Irin guru gitar Aola").
+			// fakta tersebar jadi jawaban benar — mis. "X ngajarin owner skill-Y" +
+			// "owner pakai skill-Y" → "X itu guru skill-Y-nya owner").
 			b.WriteString("[FAKTA TERVERIFIKASI tentang Mr.Dev (Aola) dari memori lo (twin graph). JAWAB pakai fakta ini & HUBUNGKAN fakta yang berkaitan. JANGAN bilang \"gak punya data/inget\" kalau jawabannya bisa disimpulkan dari fakta di bawah. Cuma abaikan kalau pertanyaan emang ga nyambung sama sekali sama fakta ini]:\n")
 			b.WriteString(fs)
 			b.WriteString("\n")
