@@ -141,6 +141,9 @@ func driveQueuedTask(ctx context.Context, host *kernelhost.Host, agentID, taskID
 		db.QueryRow("SELECT COALESCE(checkpoint,'{}') FROM agent_runs WHERE id=?", taskID).Scan(&cp)
 		meta := map[string]any{}
 		_ = json.Unmarshal([]byte(cp), &meta)
+		if meta == nil { // FIX critical (nil_map_write_auditor): unmarshal JSON-`null` ke map = set NIL → write panic
+			meta = map[string]any{}
+		}
 		meta["output"] = text
 		nb, _ := json.Marshal(meta)
 		db.Exec("UPDATE agent_runs SET state=?, checkpoint=?, updated=? WHERE id=?",
