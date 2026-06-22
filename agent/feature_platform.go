@@ -72,7 +72,16 @@ func init() {
 		// MCP connectors (external MCP servers as agent tool-sources).
 		d.Mux.HandleFunc("/api/mcp", mcphub.ListHandler)
 		d.Mux.HandleFunc("/api/mcp/install", mcphub.InstallHandler)
-		d.Mux.HandleFunc("/api/mcp/enable", mcphub.EnableHandler)
+		d.Mux.HandleFunc("/api/mcp/enable", func(w http.ResponseWriter, r *http.Request) {
+			mcphub.EnableHandler(w, r) // spawn server + register tool MCP (sync), tulis response
+			// pasca-enable RUNTIME: tool MCP baru ke-register → re-grant biar cap mcp:<id>
+			// (tool yg di-subscribe di GUI) ke-approve → plug-and-play kepake TANPA restart.
+			if d.Host != nil {
+				for _, agentID := range d.Host.AgentIDs() {
+					grantSubscribedToolCaps(d.Host, agentID)
+				}
+			}
+		})
 		d.Mux.HandleFunc("/api/mcp/disable", mcphub.DisableHandler)
 		d.Mux.HandleFunc("/api/mcp/uninstall", mcphub.UninstallHandler)
 		// Auto-start installed MCP connectors (best-effort, goroutine — jangan delay boot).
@@ -80,6 +89,16 @@ func init() {
 			ec, ecancel := context.WithTimeout(context.Background(), 2*time.Minute)
 			defer ecancel()
 			mcphub.Default.EnableAll(ec)
+			// BUG-FIX (2026-06-23, plug-and-play): grantSubscribedToolCaps di boot (main.go)
+			// jalan SEBELUM EnableAll (async goroutine ini) register tool MCP → tools.Lookup
+			// balik false → cap mcp:<id> GA ke-derive (tool MCP ga kepake walau di-subscribe).
+			// Re-grant DI SINI, setelah tool MCP ke-register → subscribe-di-GUI = beneran kepake.
+			// Privileged-only (gate sama di grantSubscribedToolCaps).
+			if d.Host != nil {
+				for _, agentID := range d.Host.AgentIDs() {
+					grantSubscribedToolCaps(d.Host, agentID)
+				}
+			}
 		}()
 	}})
 }
