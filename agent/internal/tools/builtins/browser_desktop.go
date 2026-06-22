@@ -39,15 +39,18 @@ func init() {
 	tools.Register(&browserScreenshotTool{})
 	tools.Register(&browserSetCookiesTool{})
 	tools.Register(&browserEvalTool{})
+	tools.Register(&browserCloseTool{})
 }
 
 const browserCap = "browser:control"
 
 // ── lifecycle (singleton browser + page) ────────────────────────────────────
 var (
-	brMu   sync.Mutex
-	brInst *rod.Browser
-	brPage *rod.Page
+	brMu       sync.Mutex
+	brInst     *rod.Browser
+	brPage     *rod.Page
+	brLastUsed time.Time
+	brReaper   sync.Once
 )
 
 func chromeBin() string {
@@ -69,6 +72,8 @@ func chromeBin() string {
 func getPage() (*rod.Page, error) {
 	brMu.Lock()
 	defer brMu.Unlock()
+	brLastUsed = time.Now()
+	brReaper.Do(startBrowserReaper) // jaring pengaman: auto-close browser nganggur >30mnt
 	if brInst != nil && brPage != nil {
 		return brPage, nil
 	}
@@ -423,4 +428,51 @@ func (browserEvalTool) Run(ctx context.Context, args map[string]any) (tools.Resu
 		return tools.Result{}, fmt.Errorf("eval: %w", err)
 	}
 	return tools.Result{Output: map[string]any{"result": res.Value.String()}}, nil
+}
+
+// ── lifecycle hygiene: close + idle-reaper (anti zombie chromium numpuk) ─────
+// closeBrowser — tutup browser + free resource. Idempoten. Cuma nutup instance yg
+// go-rod launch (BUKAN Chrome owner — beda proses/profil).
+func closeBrowser() {
+	brMu.Lock()
+	defer brMu.Unlock()
+	if brInst != nil {
+		_ = brInst.Close()
+		brInst, brPage = nil, nil
+	}
+}
+
+// startBrowserReaper — jaring pengaman: browser nganggur >30 menit di-close otomatis.
+// Skill WAJIB browser_close tiap tugas kelar; ini backstop kalau lupa. Dijalanin sekali
+// (brReaper sync.Once) pas browser pertama dipakai.
+func startBrowserReaper() {
+	go func() {
+		t := time.NewTicker(2 * time.Minute)
+		defer t.Stop()
+		for range t.C {
+			brMu.Lock()
+			idle := brInst != nil && time.Since(brLastUsed) > 30*time.Minute
+			brMu.Unlock()
+			if idle {
+				closeBrowser()
+			}
+		}
+	}()
+}
+
+// browser_close — tutup browser eksplisit. WAJIB dipanggil tiap tugas browser kelar.
+type browserCloseTool struct{}
+
+func (browserCloseTool) Name() string       { return "browser_close" }
+func (browserCloseTool) Capability() string { return browserCap }
+func (browserCloseTool) Schema() tools.Schema {
+	return tools.Schema{
+		Description: "Tutup browser + bebasin resource. WAJIB dipanggil tiap tugas browser kelar (anti zombie chromium numpuk). Browser auto-launch lagi pas tool browser dipakai berikutnya.",
+		Params:      nil,
+		Returns:     "{closed: true}",
+	}
+}
+func (browserCloseTool) Run(ctx context.Context, args map[string]any) (tools.Result, error) {
+	closeBrowser()
+	return tools.Result{Output: map[string]any{"closed": true}}, nil
 }

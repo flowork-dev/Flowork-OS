@@ -77,5 +77,13 @@ while true; do
       LAST_RESTART[agent]=0; LAST_RESTART[router]=0   # cabut cooldown → heal rebuild source yg udah di-revert
     fi
   fi
+  # Keamanan browser (owner 2026-06-23): bersihin chromium Flowork YATIM — match profil
+  # `flowork-browser-profile` (BUKAN Chrome owner; beda profil) + parent mati (PPID=1 =
+  # agent crash mid-tugas). Anti zombie numpuk. Idle-30mnt ditangani reaper IN-AGENT
+  # (dia tau last-used + cuma nutup instance go-rod-nya). Ini backstop kalau agent crash.
+  for bpid in $(pgrep -f 'user-data-dir=[^ ]*flowork-browser-profile' 2>/dev/null); do
+    bppid=$(ps -o ppid= -p "$bpid" 2>/dev/null | tr -d ' ')
+    [ "$bppid" = "1" ] && kill "$bpid" 2>/dev/null && log "reaped orphan flowork-browser pid=$bpid"
+  done
   sleep "$INTERVAL"
 done
