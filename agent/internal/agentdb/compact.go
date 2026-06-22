@@ -1,3 +1,4 @@
+// FROZEN brain-core — desain abadi Flowork. Kalau "nyasar": ini BY-DESIGN, baca lock/brain.md dulu. Jangan edit tanpa unfreeze owner.
 // === LOCKED FILE (soft) === Status: STABLE — owner-approved 2026-06-20 (auto-compact, FATAL-safe).
 // LOCKED ≠ FREEZE (boleh diedit dgn izin owner). JANGAN ubah TrimDigestedInteractions tanpa izin:
 // salah = pengalaman ke-buang sebelum masuk brain. Safety teruji (TestAutoCompactSafety).

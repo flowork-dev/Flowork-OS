@@ -50,28 +50,12 @@ func Init() {
 	tools.Register(&fileReadTool{})
 	tools.Register(&fileWriteTool{})
 	tools.Register(&fileListTool{})
-	// phase 1e: brain (brain.go) — Router RPC. Renamed → brain_search_shared
-	// (Roadmap 2 B0): korpus shared 5jt remote. Local brain = brain_search di bawah.
-	tools.Register(&brainSearchTool{})
-	// Roadmap 2 B0: brain LOKAL per-agent (brain_local.go) — FTS5 di state.db.
-	// brain_search = LOKAL (pengalaman sendiri, murah). Local-first.
-	tools.Register(&brainAddTool{})
-	tools.Register(&brainSearchLocalTool{})
-	tools.Register(&brainGetTool{})
-	// CGM: recall grounding dari cognitive graph lokal (cognitive_tools.go). Owner
-	// autonomy grant 2026-06-19 (LOCKED file, additive 1 line — register tool baru).
-	tools.Register(&graphRecallTool{})
-	// Roadmap 2 B2: recall mistakes pas konteks mirip (mistakes_recall.go).
-	tools.Register(&mistakeRecallTool{})
-	// Roadmap 2 B4: suggest skill dari pola tool sukses (skill_suggest.go).
+	// BRAIN-PATH tools (brain_search/add/local/get, graph_recall, mistake_recall, immune
+	// scan/verify, federation promote, codemap) DICABUT ke builtins_brain.go (FROZEN, init
+	// self-register) — jalur brain diabadikan, ga bisa ke-drop diam-diam. Lihat lock/brain.md.
+	// Skill-author tools (impl editable: skill_suggest.go/skill_author.go) tetap di sini:
 	tools.Register(&skillSuggestTool{})
-	// G8: self-author skill dari pengalaman, di-gate immune+verifier (skill_author.go).
 	tools.Register(&skillAuthorTool{})
-	// Roadmap 2 B5: immune brain (brain_immune.go) — scan/quarantine + verify.
-	tools.Register(&brainImmuneScanTool{})
-	tools.Register(&brainVerifyTool{})
-	// Roadmap 2 B6: federation (brain_federation.go) — promote lokal → shared.
-	tools.Register(&brainPromoteSharedTool{})
 	// phase 1f: comms (telegram.go)
 	tools.Register(&telegramSendTool{})
 	// phase 1d: web (web.go)
@@ -100,9 +84,7 @@ func Init() {
 	tools.Register(&planWriteTool{})
 	tools.Register(&todoTool{})
 	tools.Register(&goalDoneTool{})
-	// Section 28: codemap warga query tools (codemap_tools.go)
-	tools.Register(&codemapSearchTool{})
-	tools.Register(&codemapStatsTool{})
+	// codemap query tools (codemap_tools.go) → builtins_brain.go (FROZEN, init self-register).
 	// Operator: host power control (system_power.go) — cap exec:power, ARM-gated.
 	tools.Register(&systemPowerTool{})
 	// Operator: launch whitelisted desktop apps (app_open.go) — cap exec:app.
