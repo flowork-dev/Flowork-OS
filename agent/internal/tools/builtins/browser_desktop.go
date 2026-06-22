@@ -238,7 +238,10 @@ func (browserClickTool) Run(ctx context.Context, args map[string]any) (tools.Res
 	if err != nil {
 		return tools.Result{}, err
 	}
-	if err := el.Click(proto.InputMouseButtonLeft, 1); err != nil {
+	// go-rod el.Click nge-wait stable/interactable → HANG di SPA berat (FB "context
+	// deadline"). Pakai native JS .click() (no-wait); React/Lexical nangkep via event
+	// delegation. Cabut-akar fix (2026-06-23).
+	if _, err := el.Eval("() => this.click()"); err != nil {
 		return tools.Result{}, fmt.Errorf("click: %w", err)
 	}
 	return tools.Result{Output: map[string]any{"clicked": uid}}, nil
@@ -271,9 +274,11 @@ func (browserTypeTool) Run(ctx context.Context, args map[string]any) (tools.Resu
 	if err != nil {
 		return tools.Result{}, err
 	}
-	_ = el.SelectAllText()
-	if err := el.Input(text); err != nil {
-		return tools.Result{}, fmt.Errorf("input: %w", err)
+	// focus + select-all (kalau input) via JS, lalu CDP InsertText (no-wait, dispatch
+	// input event yg React/Lexical nangkep). el.Input go-rod bisa HANG di SPA berat.
+	_, _ = el.Eval("() => { this.focus && this.focus(); if (this.select) this.select(); }")
+	if err := p.InsertText(text); err != nil {
+		return tools.Result{}, fmt.Errorf("type: %w", err)
 	}
 	return tools.Result{Output: map[string]any{"typed": uid}}, nil
 }
