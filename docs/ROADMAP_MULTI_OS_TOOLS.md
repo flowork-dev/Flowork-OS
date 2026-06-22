@@ -292,3 +292,49 @@ ganti; **NAMA JANGAN PERNAH.** Insting/doktrin/skill/pattern nyebut tool by-name
 3. Sebelum nyentuh tool manapun, ulang audit protected-names (code grep doctrine_seed +
    `sqlite3 -readonly flowork-brain.sqlite` LIKE di constitution/cognitive_nodes/mistakes_journal +
    cek persona/self-prompt). Nama yg ke-sebut = HARAM diganti.
+
+---
+
+## 13. BROWSER-CONTROL (computer-use) — terbukti via chrome-devtools-mcp (2026-06-23)
+
+### 13.1 Bukti & sumber (jangan ngarang — udah dicontek dari yg pasti)
+Antigravity kontrol browser pakai **`chrome-devtools-mcp`** (MCP server resmi Google, di
+`~/Downloads/Antigravity-x64/.../node_modules/chrome-devtools-mcp`). Karena Flowork udah
+ngomong MCP (mcphub), kita pasang yang SAMA → **terbukti buka Facebook + baca form login**
+(2026-06-23, via mr-flow). 29 tool ke-bridge (`mcp_browser_*`).
+
+**Prinsip (yg dipelajari):**
+- Driver = **puppeteer over CDP**. Mode: launch Chrome sendiri ATAU `--browserUrl`/`--wsEndpoint`
+  connect ke Chrome jalan (pakai sesi login = cookie).
+- Persepsi = **a11y TEXT snapshot DULU** (`take_snapshot` → elemen + `uid`), *"prefer snapshot
+  over screenshot"*. Aksi by-uid (click/fill/upload_file). Screenshot cuma buat visual.
+- 43 tool total; upload = `upload_file(uid, filePath)` (puppeteer uploadFile/waitForFileChooser).
+
+### 13.2 Build portable/img — MASIH BISA (cek 2026-06-23)
+- **IMG (flowork-os):** Chromium **UDAH di-bundle** ([os/build/Dockerfile.rootfs:20](FLowork_os/os/build/Dockerfile.rootfs#L20)
+  `apk add cage chromium`, Alpine 3.20 kiosk). Yang kurang cuma node.
+- **Portable:** perlu bundle chromium + (node ATAU Go-CDP).
+- **Android:** beda total (no node/CDP) → WebView + Accessibility Service (track terpisah).
+
+### 13.3 Dua opsi implementasi (KEPUTUSAN ARSITEKTUR)
+- **A. Tetap chrome-devtools-mcp (node):** `apk add nodejs` ke image (+~50MB) + ship paket.
+  Plus: proven Google, vocab 29-tool. Minus: runtime node + rantai npm (lawan minimal/standalone).
+- **B. Browser-tool Go-native (chromedp/go-rod) — REKOMENDASI buat SHIP:** tulis di Go (drive
+  chromium yg udah di image, CDP langsung), **TANPA node**, 1 binary, ikut cross-compile (reuse
+  mobile). Cetak-biru = vocab 29-tool + a11y-snapshot dari chrome-devtools-mcp. Minus: tulis sendiri.
+- **Strategi:** A buat prototip/sekarang (proven, jalan hari ini) · B buat build yg di-ship.
+
+### 13.4 ⛔ BLOKER PLUG-AND-PLAY — bug cap-grant MCP (HARUS difix duluan)
+**Gejala:** install MCP/plugin + subscribe-di-GUI → tool ke-bridge TAPI agent **ga bisa pake**
+(`sandbox: capability denied: mcp:<id>`). **Root cause:** `grantSubscribedToolCaps`
+([main.go:788](FLowork_os/agent/main.go#L788), FROZEN) jalan pas boot SEBELUM `mcphub.EnableAll`
+(async) register tool MCP → `tools.Lookup(name)` balik false → cap `mcp:<id>` ga ke-derive.
+Komentar kode sendiri ngaku *"mcp:* ga ke-grant (bug)"* (main.go:600). Ga ada caller runtime;
+`SkipCapGate` ga dipake; app-grants cuma `app:`. **→ semua tool MCP saat ini ga kepake lewat
+jalur GUI normal.** (Workaround demo: deklarasi cap di manifest agent — BUKAN cara bener.)
+
+**Fix (FONDASI plug-and-play, kerjain DULU):** grant cap MCP setelah tool ke-register.
+Cari lokasi EDITABLE (hindari frozen main.go) — kandidat: pasca-`EnableAll`/`Enable` di mcphub
+atau helper feature, grant `mcp:<conn>` ke privileged-agent yg subscribe. Juga handle
+runtime-install (enable connector → grant), bukan cuma boot. Acceptance: subscribe browser
+tool di GUI → `navigate` jalan TANPA manifest-hack.
