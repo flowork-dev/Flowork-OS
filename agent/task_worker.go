@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"log"
 	"strings"
+	"sync"
 	"time"
 
 	"flowork-gui/internal/kernelhost"
@@ -28,6 +29,43 @@ import (
 const maxConcurrentTasks = 2
 
 var taskSem = make(chan struct{}, maxConcurrentTasks)
+
+// agentBusySet — RACE-GUARD D18 (roadmap E): jamin MAKS 1 background-task per agent jalan
+// sekali waktu. AKAR: 2 loop agent-SAMA paralel → tulis berebut state.db (kv `__d18_active_task`,
+// interactions) = korup working-set. Serialize per-agent di SINI (worker non-beku) — BUKAN lock
+// di choke-point InvokeAgentMessage (bisa deadlock nested agent-call group). Lintas-agent TETAP
+// paralel (throughput kejaga). bg-task per agent jadi sekuensial (bener: loop agent ga reentrant).
+type agentBusySet struct {
+	mu sync.Mutex
+	m  map[string]bool
+}
+
+func newAgentBusySet() *agentBusySet { return &agentBusySet{m: map[string]bool{}} }
+
+func (s *agentBusySet) isBusy(id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.m[id]
+}
+
+// tryAcquire — tandai agent busy; false kalau udah busy (ga jadi mulai).
+func (s *agentBusySet) tryAcquire(id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.m[id] {
+		return false
+	}
+	s.m[id] = true
+	return true
+}
+
+func (s *agentBusySet) release(id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.m, id)
+}
+
+var bgBusy = newAgentBusySet()
 
 // RunQueuedTasks — drive setiap task ber-state 'queued' lintas semua agent, async.
 // Return jumlah task yang MULAI di-drive tick ini. Mirror RunDueWakeups; bedanya:
@@ -65,34 +103,59 @@ func RunQueuedTasks(ctx context.Context, host *kernelhost.Host) int {
 			}
 			rows.Close()
 		}
-		for _, q := range queued {
-			if strings.TrimSpace(q.prompt) == "" {
-				// Ga ada prompt buat di-drive → tandai error biar ga muter (anti-stuck).
-				db.Exec("UPDATE agent_runs SET state='error', updated=? WHERE id=? AND state='queued'",
-					time.Now().UTC().Format(time.RFC3339), q.id)
-				continue
-			}
-			// Try-acquire slot non-blocking: penuh → biarin 'queued' (tick berikut).
-			select {
-			case taskSem <- struct{}{}:
-			default:
-				continue
-			}
-			// Mark 'running' DULU (anti re-pick tick berikut, sama pola wakeup mark-fired).
-			now := time.Now().UTC().Format(time.RFC3339)
-			res, e := db.Exec("UPDATE agent_runs SET state='running', updated=? WHERE id=? AND state='queued'", now, q.id)
-			if e != nil {
-				<-taskSem
-				continue
-			}
-			if n, _ := res.RowsAffected(); n == 0 {
-				// Race: task udah ke-pick proses lain → lepas slot, skip.
-				<-taskSem
-				continue
-			}
-			started++
-			go driveQueuedTask(ctx, host, id, q.id, q.label, q.prompt)
+		// RACE-GUARD D18: skip agent yg LAGI jalanin bg-task (anti 2 loop agent-sama paralel
+		// → korup state.db / kv working-set). Lintas-agent tetep paralel.
+		if bgBusy.isBusy(id) {
+			store.Close()
+			continue
 		}
+		// Pilih 1 task drivable (≤1 per agent per tick); empty-prompt → error (anti-stuck).
+		pick := -1
+		for i := range queued {
+			if strings.TrimSpace(queued[i].prompt) == "" {
+				db.Exec("UPDATE agent_runs SET state='error', updated=? WHERE id=? AND state='queued'",
+					time.Now().UTC().Format(time.RFC3339), queued[i].id)
+				continue
+			}
+			pick = i
+			break
+		}
+		if pick < 0 {
+			store.Close()
+			continue
+		}
+		q := queued[pick]
+		// Try-acquire slot global non-blocking: penuh → biarin 'queued' (tick berikut).
+		select {
+		case taskSem <- struct{}{}:
+		default:
+			store.Close()
+			continue
+		}
+		// Per-agent busy (anti dobel agent-sama). Gagal acquire → lepas slot, skip.
+		if !bgBusy.tryAcquire(id) {
+			<-taskSem
+			store.Close()
+			continue
+		}
+		// Mark 'running' atomik (anti re-pick tick berikut, pola wakeup mark-fired).
+		now := time.Now().UTC().Format(time.RFC3339)
+		res, e := db.Exec("UPDATE agent_runs SET state='running', updated=? WHERE id=? AND state='queued'", now, q.id)
+		if e != nil {
+			<-taskSem
+			bgBusy.release(id)
+			store.Close()
+			continue
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			// Race: task udah ke-pick → lepas slot + busy, skip.
+			<-taskSem
+			bgBusy.release(id)
+			store.Close()
+			continue
+		}
+		started++
+		go driveQueuedTask(ctx, host, id, q.id, q.label, q.prompt)
 		store.Close()
 	}
 	return started
@@ -102,7 +165,8 @@ func RunQueuedTasks(ctx context.Context, host *kernelhost.Host) int {
 // fault-containment (host SELAMAT). Buka store FRESH (poller udah Close store-nya).
 func driveQueuedTask(ctx context.Context, host *kernelhost.Host, agentID, taskID, label, prompt string) {
 	defer func() {
-		<-taskSem // lepas slot APAPUN yang terjadi
+		<-taskSem               // lepas slot APAPUN yang terjadi
+		bgBusy.release(agentID) // lepas guard per-agent (boleh drive task agent ini lagi)
 		if r := recover(); r != nil {
 			log.Printf("[queued-task] PANIC drive %s (host selamat): %v", taskID, r)
 			if st, e := host.OpenAgentStore(agentID); e == nil {
