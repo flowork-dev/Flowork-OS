@@ -16,6 +16,7 @@ import (
 	"flowork-gui/internal/floworkdb"
 	"flowork-gui/internal/groupsapi"
 	"flowork-gui/internal/kernelhost"
+	"flowork-gui/internal/settingsapi"
 )
 
 // Deps — semua dependency shared yg handler/feature butuh. Di-populate di main() PASCA-boot.
@@ -24,9 +25,10 @@ type Deps struct {
 	Ctx       context.Context
 	Host      *kernelhost.Host
 	FDB       *floworkdb.Store
-	AuthMgr   *floworkauth.Manager
-	GroupsAPI *groupsapi.Handler
-	Mux       *http.ServeMux
+	AuthMgr     *floworkauth.Manager
+	GroupsAPI   *groupsapi.Handler
+	SettingsAPI *settingsapi.API
+	Mux         *http.ServeMux
 	StaticFS  fs.FS
 	Extra     map[string]any
 }

@@ -119,7 +119,6 @@ import (
 	"flowork-gui/internal/kernelhost"
 	"flowork-gui/internal/loket"
 	"flowork-gui/internal/marketdata"
-	"flowork-gui/internal/mcphub"
 	"flowork-gui/internal/scanapi"
 	"flowork-gui/internal/scheduler"
 	"flowork-gui/internal/settingsapi"
@@ -707,90 +706,11 @@ func main() {
 	// FASE-B (agnostic host): Deps shared buat feature_*.go yg self-register. Route lama di
 	// bawah pelan-pelan migrasi ke feature_*.go; applyPhase(PhaseRoute) di akhir mount yg udah
 	// migrasi. Saat semua pindah → main.go = bootstrap murni → FREEZE. Lihat feature_registry.go.
-	d := &Deps{Ctx: ctx, Host: host, FDB: fdb, AuthMgr: authMgr, GroupsAPI: groupsAPI, Mux: mux, StaticFS: staticFS, Extra: map[string]any{}}
+	d := &Deps{Ctx: ctx, Host: host, FDB: fdb, AuthMgr: authMgr, GroupsAPI: groupsAPI, SettingsAPI: settingsAPI, Mux: mux, StaticFS: staticFS, Extra: map[string]any{}}
 	applyPhase(d, PhaseWire) // hook global yg udah migrasi (B4)
 
 	// Auth — single-owner password (floworkauth). Session cookie in-memory.
 	// MIGRASI FASE-B → feature_auth.go (self-register PhaseRoute).
-	mux.HandleFunc("/api/system/health", systemHealth)
-
-	// Groups (§F2) — GUI tab "Group" reads/edits group rosters.
-	mux.HandleFunc("/api/groups", groupsAPI.ListHandler)
-	mux.HandleFunc("/api/groups/config", groupsAPI.ConfigHandler)
-	mux.HandleFunc("/api/groups/create", groupsAPI.CreateHandler)
-	mux.HandleFunc("/api/groups/delete", groupsAPI.DeleteHandler)
-	mux.HandleFunc("/api/groups/toggle", groupsAPI.ToggleHandler) // group on/off (cascade to members)
-	mux.HandleFunc("/api/groups/reset", groupsAPI.ResetHandler)   // restore bundled groups if deleted
-
-	// Page routes — FileServer cuma map exact filename (/login.html), jadi
-	// /login & /register butuh handler eksplisit yang serve embedded HTML.
-	servePage := func(name string) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
-			data, rerr := fs.ReadFile(staticFS, name)
-			if rerr != nil {
-				http.NotFound(w, r)
-				return
-			}
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			_, _ = w.Write(data)
-		}
-	}
-	mux.HandleFunc("/login", servePage("login.html"))
-	mux.HandleFunc("/register", servePage("register.html"))
-
-	// Settings (owner-level, flowork.db global).
-	mux.HandleFunc("/api/settings/keys", settingsAPI.KeysHandler)
-	mux.HandleFunc("/api/settings/router-default", settingsAPI.RouterDefaultHandler)
-	mux.HandleFunc("/api/settings/notify", settingsAPI.NotifyHandler)
-	settingsapi.TestNotifyFunc = notifyOwnerTelegram
-	// Owner-notify HUB (§ FlowAlpha): a loopback-only endpoint so local sandboxed apps/scanner
-	// can push an owner Telegram alert WITHOUT holding the token. Additive; reuses
-	// notifyOwnerTelegram. Reachable without a session ONLY for a local non-browser caller
-	// (isPublicPath gates it + cross-site browser drive-by is cut there).
-	mux.HandleFunc("/api/notify", notifyHubHandler)
-	// Settings → YouTube (owner-level OAuth via GUI, no .scratch)
-	mux.HandleFunc("/api/settings/youtube", settingsAPI.YouTubeStatusHandler)
-	mux.HandleFunc("/api/settings/youtube/credentials", settingsAPI.YouTubeCredentialsHandler)
-	mux.HandleFunc("/api/settings/youtube/connect", settingsAPI.YouTubeConnectHandler)
-	mux.HandleFunc("/api/settings/youtube/disconnect", settingsAPI.YouTubeDisconnectHandler)
-	mux.HandleFunc("/api/settings/youtube/config", settingsAPI.YouTubeConfigHandler)
-
-	// Kernel introspection (list agent, RPC call).
-	mux.HandleFunc("/api/kernel/status", host.StatusHandler)
-	mux.HandleFunc("/api/kernel/agents", host.AgentsHandler)
-	mux.HandleFunc("/api/kernel/rpc", host.RPCHandler)
-	mux.HandleFunc("/api/agents/ui-schema", host.UISchemaHandler)
-
-	// "Papan kosong" microkernel — the single loket: ONE endpoint where a module
-	// makes call(cap, args). ADDITIVE + non-breaking; runs beside the legacy
-	// kernel. Loopback-only (caller id is kernel-stamped via the loopback secret).
-	loketSvc := wireLoket(host)
-	mux.HandleFunc("/api/kernel/call", loketSvc.CallHandler)
-	mux.HandleFunc("/api/kernel/gui", loketSvc.GUIHandler)
-	mux.HandleFunc("/api/kernel/webhook/", loketSvc.WebhookHandler)
-
-	// Connections — universal connector registry (telegram/discord/email/cli/...).
-	// Install reuses the .fwpack gerbang (kind:channel); these cover list/toggle/
-	// config/uninstall. Each connector is self-contained in its own folder.
-	mux.HandleFunc("/api/connections", connections.ListHandler)
-	mux.HandleFunc("/api/connections/toggle", connections.ToggleHandler)
-	mux.HandleFunc("/api/connections/config", connections.ConfigHandler)
-	mux.HandleFunc("/api/connections/uninstall", connections.UninstallHandler)
-
-	// MCP connectors (Jenis 2: external MCP servers as agent tool-sources).
-	// Owner-gated. Installed connectors auto-start below.
-	mux.HandleFunc("/api/mcp", mcphub.ListHandler)
-	mux.HandleFunc("/api/mcp/install", mcphub.InstallHandler)
-	mux.HandleFunc("/api/mcp/enable", mcphub.EnableHandler)
-	mux.HandleFunc("/api/mcp/disable", mcphub.DisableHandler)
-	mux.HandleFunc("/api/mcp/uninstall", mcphub.UninstallHandler)
-	// Auto-start installed MCP connectors (best-effort) so their tools are registered
-	// for agents right away. In a goroutine — a slow MCP server must not delay boot.
-	go func() {
-		ec, ecancel := context.WithTimeout(context.Background(), 2*time.Minute)
-		defer ecancel()
-		mcphub.Default.EnableAll(ec)
-	}()
 
 	// Agent manager (upload .fwagent.zip, config per agent).
 	mux.HandleFunc("/api/agents/upload", agentmgr.UploadHandler)
