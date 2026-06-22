@@ -1,3 +1,6 @@
+// Owner: Mr.Dev · github.com/flowork-os/Flowork-OS · floworkos.com
+// ⚠️ FROZEN brain-core — jangan edit tanpa unfreeze owner. Arsitektur & alasan: lihat lock/brain.md
+//
 // cognitive_antibody.go — F4 brain-pathway: ANTIBODY KOLEKTIF (lintas-agent).
 //
 // AKAR (roadmap F4): recovery-instinct (INC-3) yg DITEMUKAN INDEPENDEN oleh ≥N agent

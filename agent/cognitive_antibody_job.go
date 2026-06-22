@@ -1,3 +1,6 @@
+// Owner: Mr.Dev · github.com/flowork-os/Flowork-OS · floworkos.com
+// ⚠️ FROZEN brain-core — jangan edit tanpa unfreeze owner. Arsitektur & alasan: lihat lock/brain.md
+//
 // cognitive_antibody_job.go — F4 host orchestrator: ANTIBODY KOLEKTIF lintas-agent.
 //
 // Recovery-instinct (INC-3) yg ditemukan INDEPENDEN oleh >=N agent (kelas-error sama) =
