@@ -4,6 +4,8 @@
 //	— drawer tombstoned JANGAN di-retrieve (paritas dgn FTS retrieve.go). Re-LOCK.
 //
 // AI lain: JANGAN otak-atik tanpa izin owner. Teruji (TestSemanticLive: vector murni by-makna).
+// 2026-06-22 (owner-approved, F5/D32-INC4): SemanticRetrieve MERGE fresh-recall (freshRetrieve di
+//   fresh_index.go) — ADDITIF, vector-only, fresh kosong → 0 regresi. Re-LOCK.
 //
 // semantic.go — #6 ARSITEK BARU: pencarian brain by-MAKNA (Quantum Recall, vector murni).
 //
@@ -173,8 +175,14 @@ func SemanticRetrieve(ctx context.Context, db *sql.DB, query string, opts Retrie
 	if limit <= 0 {
 		limit = 6
 	}
-	if vec := vectorRetrieve(ctx, db, query, limit, opts.MaxContentLen, opts.Wings); len(vec) > 0 {
-		return vec, nil // semantic murni (arsitek baru)
+	vec := vectorRetrieve(ctx, db, query, limit, opts.MaxContentLen, opts.Wings)
+	// F5 (2026-06-22, owner-approved): MERGE fresh-recall — drawer federation BARU (mis.
+	// recovery-instinct INC-4) yg belum masuk index utama (di-build manual + cached). Tetap
+	// VECTOR-ONLY (bukan hybrid FTS); ADDITIF: fresh kosong → mergeFresh(vec,nil)==vec → 0
+	// regresi. Lihat fresh_index.go.
+	fresh := freshRetrieve(ctx, db, query, limit, opts.MaxContentLen, opts.Wings)
+	if len(vec) > 0 || len(fresh) > 0 {
+		return mergeFresh(vec, fresh, limit), nil // semantic murni (utama + fresh)
 	}
 	return Retrieve(ctx, db, query, opts) // fallback SEMENTARA (index belum jadi)
 }

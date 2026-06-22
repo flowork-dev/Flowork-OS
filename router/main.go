@@ -12,6 +12,8 @@
 //   ACTUAL listen port (parsed from -addr) instead of a hardcoded 2402, so nodes on
 //   non-default ports / multiple nodes per host mesh correctly. Bug fix only — enables the
 //   mesh, removes nothing.
+// 2026-06-22 (owner-approved, F5/D32-INC4): + boot goroutine ticker brain.RebuildFreshIndex
+//   (fresh-recall index buat drawer federation baru). Additive — gak ngubah jalur lain.
 // Reason: Audit pass — audit pass surface review.
 
 // flow_router Entry Point.
@@ -28,9 +30,9 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strings"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -175,8 +177,8 @@ func main() {
 	policyEngineRef = policyEngine
 
 	loadMITMCaptureState()
-	loadLearnCaptureState()      // 3E/D13: auto-capture toggle (kv, GUI) — owner 2026-06-21
-	loadLocalAIAutostartState()  // local-AI autostart toggle (kv, GUI; migrasi sekali dari env)
+	loadLearnCaptureState()     // 3E/D13: auto-capture toggle (kv, GUI) — owner 2026-06-21
+	loadLocalAIAutostartState() // local-AI autostart toggle (kv, GUI; migrasi sekali dari env)
 	startTunnelWatchdog()
 	providers, _ := store.ListProviders(d)
 	log.Printf("Providers loaded: %d", len(providers))
@@ -194,6 +196,31 @@ func main() {
 	// no GUI click. Goroutine (never blocks serve); skips silently for cloud-only
 	// setups. Disable with FLOWORK_LOCALAI_AUTOSTART=0.
 	go maybeAutostartLocalAI(providers)
+
+	// F5 (D32-INC4 enabler): fresh-recall index. Rebuild on boot + tiap 2 menit (change-
+	// detect → murah) supaya drawer federation BARU (recovery-instinct INC-4) ke-recall
+	// SEBELUM vindex utama di-rebuild manual. Best-effort, goroutine — gak pernah blok serve.
+	go func() {
+		if n, err := brain.RebuildFreshIndex(ctx); err != nil {
+			log.Printf("WARN: fresh-index boot rebuild: %v", err)
+		} else if n > 0 {
+			log.Printf("brain: fresh-recall index built (%d federation drawers)", n)
+		}
+		t := time.NewTicker(2 * time.Minute)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				if n, err := brain.RebuildFreshIndex(ctx); err != nil {
+					log.Printf("WARN: fresh-index rebuild: %v", err)
+				} else if n > 0 {
+					log.Printf("brain: fresh-recall index refreshed (%d federation drawers)", n)
+				}
+			}
+		}
+	}()
 
 	mux := http.NewServeMux()
 
