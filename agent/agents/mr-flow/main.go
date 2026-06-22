@@ -149,19 +149,19 @@ const (
 // Setiap layer yang inject ke system prompt WAJIB respect budget di sini.
 // On-demand fetch via tool call lebih baik daripada always-inject.
 const (
-	maxActiveSkills      = 3    // max skill auto-inject ke persona (sisanya via skill_search)
+	maxActiveSkills = 3 // max skill auto-inject ke persona (sisanya via skill_search)
 	// LOOP TIME-BOUND, BUKAN CAP-ANGKA (owner 2026-06-20: "loop jangan dibatasi —
 	// Flowork didesain buat berevolusi"). In-turn loop jalan TERUS selama masih ada
 	// budget WAKTU turn; abis budget → break bersih + model di-arahin ScheduleWakeup
 	// buat LANJUT lintas-turn (tidur→bangun→sambung) = unbounded sepanjang waktu.
 	// maxToolIters = safety-backstop GEDE (anti runaway no-progress), bukan batas kerja.
-	maxToolIters         = 100    // backstop iterasi (anti pure-infinite no-time-advance); batas NYATA = loopBudgetMs
-	loopBudgetMs  uint64 = 200000 // budget waktu in-turn (~200s); turn-timeout 290s — margin GEDE biar wrap-up/ScheduleWakeup call (26B lambat ~40s) ga ke-kill
-	maxGhostNudges       = 6      // ghost-guard: max paksa-lanjut pas NARASI-tanpa-tool (anti-ghosting). Bukan batas kerja (tool-call ga ngitung) — cukup tinggi biar loop sah jalan, tetep bounded anti narasi-loop
-	maxMsgContentChars   = 6000 // cap per-message content sebelum kirim ke LLM
-	keepToolResultsFull  = 4    // hasil tool terbaru yang TIDAK di-prune (sisanya diringkas)
-	maxSkillCharsPerItem = 300  // truncate instruction skill kalau terlalu panjang
-	maxPersonaTotalChars = 9000 // hard cap system prompt total (3-tier + memory snapshot)
+	maxToolIters                = 100    // backstop iterasi (anti pure-infinite no-time-advance); batas NYATA = loopBudgetMs
+	loopBudgetMs         uint64 = 200000 // budget waktu in-turn (~200s); turn-timeout 290s — margin GEDE biar wrap-up/ScheduleWakeup call (26B lambat ~40s) ga ke-kill
+	maxGhostNudges              = 6      // ghost-guard: max paksa-lanjut pas NARASI-tanpa-tool (anti-ghosting). Bukan batas kerja (tool-call ga ngitung) — cukup tinggi biar loop sah jalan, tetep bounded anti narasi-loop
+	maxMsgContentChars          = 6000   // cap per-message content sebelum kirim ke LLM
+	keepToolResultsFull         = 4      // hasil tool terbaru yang TIDAK di-prune (sisanya diringkas)
+	maxSkillCharsPerItem        = 300    // truncate instruction skill kalau terlalu panjang
+	maxPersonaTotalChars        = 9000   // hard cap system prompt total (3-tier + memory snapshot)
 	// Fase 1 phase-2: memory snapshot capped (per roadmap ~USER 500tok / MEMORY 800tok).
 	memUserCap    = 2000 // cap USER.md inject (~500 token approx)
 	memProjectCap = 3200 // cap MEMORY.md inject (~800 token approx)
@@ -956,47 +956,8 @@ func fetchMemoryValue(key string) string {
 	return ""
 }
 
-// trivialChatTokens — kata sapaan/ack/filler yang ZERO nilai buat di-recall.
-// Dipakai gate auto-recall (N1-C): pesan yang SEMUA token-nya ada di sini ga butuh
-// fakta memori, jadi recall di-skip (hemat 2 tool-call graph+brain per turn).
-var trivialChatTokens = map[string]bool{
-	// sapaan
-	"halo": true, "hallo": true, "hai": true, "hi": true, "hello": true, "hey": true,
-	"hei": true, "woi": true, "oi": true, "pagi": true, "siang": true, "sore": true,
-	"malam": true, "selamat": true,
-	// terima kasih
-	"makasih": true, "makasi": true, "thanks": true, "thank": true, "thx": true,
-	"trims": true, "terima": true, "kasih": true, "ty": true, "tq": true,
-	// apresiasi / setuju
-	"mantap": true, "mantul": true, "keren": true, "sip": true, "oke": true, "ok": true,
-	"okay": true, "okey": true, "yoi": true, "noted": true, "baik": true, "beres": true,
-	"gas": true, "siap": true, "iya": true, "ya": true, "yup": true, "yep": true,
-	"yes": true, "betul": true, "bener": true, "good": true, "nice": true,
-	// filler / partikel
-	"bro": true, "bre": true, "bang": true, "min": true, "dong": true, "deh": true,
-	"sih": true, "nih": true, "kok": true, "banget": true, "banyak": true, "juga": true,
-	"aja": true, "lah": true, "yaa": true, "yaaa": true, "wkwk": true, "wkwkwk": true,
-	"haha": true, "hehe": true, "lol": true,
-}
-
-// isTrivialChat — true kalau q cuma sapaan/ack/filler (SEMUA token trivial).
-// KONSERVATIF: 1 kata substantif aja (mis. "siapa", "gw", "guru") matahin gate →
-// query sah spt "siapa gw" / "siapa guru gitar gw" TETAP ke-recall. Token = huruf
-// aja (emoji/tanda baca/angka di-buang), max 5 token (lebih = bukan sapaan murni).
-func isTrivialChat(q string) bool {
-	fields := strings.FieldsFunc(strings.ToLower(q), func(r rune) bool {
-		return r < 'a' || r > 'z'
-	})
-	if len(fields) == 0 || len(fields) > 5 {
-		return false
-	}
-	for _, w := range fields {
-		if !trivialChatTokens[w] {
-			return false
-		}
-	}
-	return true
-}
+// isTrivialChat() + trivialChatTokens di-EKSTRAK ke recall_gate.go (N1-C, FROZEN
+// brain-core; pola nano-modular — main.go = wiring editable). Dipanggil di fetchAutoRecall.
 
 // fetchAutoRecall — D18/D19 working-memory: rakit grounding memori OTOMATIS tiap
 // turn, GAK gantung LLM milih manggil tool. Akar fix recall produksi: SEBELUMNYA

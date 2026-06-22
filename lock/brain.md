@@ -137,7 +137,7 @@ Ada **3 jalur** node bisa lahir di `cognitive_nodes`:
 
 ## 7. AUTO-RECALL (inti "kenal owner") — file `agent/agents/mr-flow/main.go` (fungsi `fetchAutoRecall`)
 - `fetchAutoRecall(userText)` di-panggil TIAP TURN → jalanin `graph_recall`(query=userText, budget 2800) + `brain_search`(query=userText, k=5) → inject fakta relevan ke **Tier-3** prompt + **directive TEGAS**.
-- **N1-C GATE (2026-06-22): skip recall pas pesan TRIVIAL.** Helper `isTrivialChat(q)` + set `trivialChatTokens` (sapaan/ack/filler) di awal `fetchAutoRecall` → return "" kalau SEMUA token pesan trivial ("halo"/"makasih bro") → `graph_recall` + `brain_search` GA jalan (hemat ~200-250 token + 2 tool-call/turn). KONSERVATIF: 1 kata substantif matahin gate → query identitas/relasi ("siapa gw") TETAP ke-recall (0 regresi; unit 30/30 + e2e dbgchat). main.go SENGAJA non-frozen → gate ikut editable di sini.
+- **N1-C GATE (2026-06-22): skip recall pas pesan TRIVIAL.** Helper `isTrivialChat(q)` + set `trivialChatTokens` (sapaan/ack/filler) → `fetchAutoRecall` panggil di awal → return "" kalau SEMUA token pesan trivial ("halo"/"makasih bro") → `graph_recall` + `brain_search` GA jalan (hemat ~200-250 token + 2 tool-call/turn). KONSERVATIF: 1 kata substantif matahin gate → query identitas/relasi ("siapa gw") TETAP ke-recall (0 regresi; unit 30/30 + e2e dbgchat). **DI-EKSTRAK ke `agents/mr-flow/recall_gate.go` (FROZEN, pola nano-modular spt recovery_capture.go); main.go cuma manggil (wiring, tetap editable).**
 - **2 directive (string di `b.WriteString`):**
   - graph: `[FAKTA TERVERIFIKASI tentang Mr.Dev... JAWAB pakai fakta ini & HUBUNGKAN fakta yang berkaitan. JANGAN bilang "gak punya data/inget" kalau bisa disimpulkan...]`. ("HUBUNGKAN" = biar model nyambungin fakta tersebar, mis. "X taught owner" + "owner uses Y" → "X guru Y owner".)
   - brain: `[FAKTA VERBATIM dari memori lo (drawer tersimpan) — JAWAB PAKAI INI. JANGAN bilang "gak tau / ga ada catatan" kalau jawabannya ADA di bawah]` (diperkuat 2026-06-22 biar model 26B ga ngabaikan drawer).
@@ -183,6 +183,7 @@ Ada **3 jalur** node bisa lahir di `cognitive_nodes`:
 
 **agent-side mr-flow brain (FROZEN, di-panggil dari main.go):**
 - `agents/mr-flow/recovery_capture.go` (**D32 INC-2** capture error→recovery; nano-modular: logic-brain terpisah dari orkestrator main.go).
+- `agents/mr-flow/recall_gate.go` (**N1-C** gate auto-recall `isTrivialChat`+`trivialChatTokens`; nano-modular: di-ekstrak dari main.go, FROZEN).
 
 **routerclient (jembatan ke router):**
 - `embed.go` (EmbedText → bge-m3) · routerclient (ChatComplete → LLM).
@@ -258,10 +259,12 @@ Router brain (`flowork-brain.sqlite`, shared 5jt) = sumber knowledge-base luas, 
 
 **D2. Auto-capture recovery (D32 INC-2) — `agent/agents/mr-flow/recovery_capture.go`:** logic-brain `captureRecovery`/`toolErrClass`/`recoveryCaptureSkip` DI-EKSTRAK dari main.go = realisasi PERTAMA pola granular §13.D (main.go = list/wiring EDITABLE, logic-brain = file terpisah FROZEN). Tool ERROR→tool SAMA SUKSES dalam loop → `mistake_log` → pipeline INC-1. Dipanggil 1 baris dari tool-loop main.go. FROZEN.
 
+**D3. Gate auto-recall (N1-C) — `agent/agents/mr-flow/recall_gate.go`:** `isTrivialChat(q)` + `trivialChatTokens` DI-EKSTRAK dari main.go (pola granular §13.D). `fetchAutoRecall` skip recall (graph+brain) kalau pesan cuma sapaan/ack/filler → hemat ~200-250 token + 2 tool-call/turn trivial. KONSERVATIF (1 kata substantif matahin gate → recall sah tetap jalan). Dipanggil 1 baris dari main.go. FROZEN.
+
 **E. Loop non-beku yg NYENTUH brain (boleh evolve tapi hati2):** `dream_digester_seed.go` · `mistake_promote_job.go` · `learning_feed.go`/`agentdb/learning_log.go` · `agentmgr/cognitive_digest_cron.go` · `graph_autosync.go` (B4 auto-sync sumber→graph, ticker host + change-detection; **FROZEN** chattr+hash 2026-06-22 = 32 file brain-core).
 
 **F. GUI — ⛔ TIDAK di-freeze (owner 2026-06-22):** `web/tabs/cognitive.js` + `agentmgr/cognitive_handlers.go` = jalur GUI/viz (warna/legend/filter masih EVOLVE). **Jangan dikunci** — biar bebas berkembang.
 
 **⛔ JANGAN di-freeze:** **GUI** (cognitive.js + cognitive_handlers.go — viz berkembang) · **main.go** (fetchAutoRecall di sini; main.go bakal jadi LIST/wiring doang — nano-modular, nanti) · **scratch** (`_scratch_cgm/*` — gitignored, sekali-pakai) · **DATA** (db/`cognitive_nodes`/embedding/drawer — TUMBUH terus; freeze cuma buat CODE).
 
-**STATUS 2026-06-22:** **32 file brain-core FROZEN** (chattr +i + SHA256 di `KERNEL_FREEZE.md`, TestKernelFreeze 59 hash PASS): 30 brain-LOGIC (A+B+C+E, strip-komentar + header minimal, kode+perilaku IDENTIK) + **D2** `recovery_capture.go` (D32 INC-2, di-ekstrak dari main.go) + **B4** `graph_autosync.go` (auto-sync sumber→graph). Pola **nano-modular**: file brain-pathway terpisah → FREEZE; orkestrator (`main.go`) tetap EDITABLE. **+ DOC INI (`lock/brain.md`) di-FREEZE 2026-06-22 (chattr +i)** — lindungi arsitektur kanonik dari edit-tak-sadar AI; unfreeze sadar (`sudo chattr -i`) buat update. **SISA (nanti):** OS-sealer otomatis pas `--arm` (N3).
+**STATUS 2026-06-22:** **33 file brain-core FROZEN** (chattr +i + SHA256 di `KERNEL_FREEZE.md`, TestKernelFreeze 60 hash PASS): 30 brain-LOGIC (A+B+C+E, strip-komentar + header minimal, kode+perilaku IDENTIK) + **D2** `recovery_capture.go` (D32 INC-2, di-ekstrak dari main.go) + **B4** `graph_autosync.go` (auto-sync sumber→graph) + **D3** `recall_gate.go` (N1-C gate auto-recall, di-ekstrak dari main.go). Pola **nano-modular**: file brain-pathway terpisah → FREEZE; orkestrator (`main.go`) tetap EDITABLE. **+ DOC INI (`lock/brain.md`) di-FREEZE 2026-06-22 (chattr +i)** — lindungi arsitektur kanonik dari edit-tak-sadar AI; unfreeze sadar (`sudo chattr -i`) buat update. **SISA (nanti):** OS-sealer otomatis pas `--arm` (N3).
