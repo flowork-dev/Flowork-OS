@@ -167,6 +167,9 @@ func SelfPromptRenderHandler(w http.ResponseWriter, r *http.Request) {
 	// TIME-AWARENESS (owner 2026-06-23): inject waktu LIVE (WIB default) di paling atas system-prompt
 	// SEMUA agent → fix "berita lama" (LLM ga lagi nebak tanggal dari training). Detail: time_awareness.go.
 	b.WriteString(WIBNowHeader())
+	// RESILIENCE (ITEM 1 roadmap agent-resilience): doktrin recovery (diagnosa/retry-transient/jujur/no-poll)
+	// → semua agent tahan-banting, ga loop-mati pas error transient. Switch FLOWORK_RESILIENCE_OFF. Detail: agent_resilience.go.
+	b.WriteString(RecoveryDoctrine())
 	emitted := []string{}
 	emitOne := func(slot string) {
 		if sp, ok := byName[slot]; ok {
