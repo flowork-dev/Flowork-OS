@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 	"unsafe"
 )
 
@@ -52,11 +53,11 @@ const (
 	toolRun   = "http://127.0.0.1:1987/api/agents/tools/run?id="
 	selfPromp = "http://127.0.0.1:1987/api/agents/self-prompt/render?id="
 
-	maxToolIters         = 100    // backstop anti pure-infinite; batas NYATA = loopBudgetMs
-	loopBudgetMs  uint64 = 200000 // budget waktu in-turn (~200s); turn-timeout 290s = backstop keras
-	maxGhostNudges       = 6      // ghost-guard: max paksa-lanjut pas narasi-tanpa-tool (bounded)
-	maxAutoContinue      = 50     // anti-runaway: max chunk auto-continue (≈2.7 jam) — BUKAN batas kerja
-	autoContDelim        = "\n===TUGAS===\n"
+	maxToolIters           = 100    // backstop anti pure-infinite; batas NYATA = loopBudgetMs
+	loopBudgetMs    uint64 = 200000 // budget waktu in-turn (~200s); turn-timeout 290s = backstop keras
+	maxGhostNudges         = 6      // ghost-guard: max paksa-lanjut pas narasi-tanpa-tool (bounded)
+	maxAutoContinue        = 50     // anti-runaway: max chunk auto-continue (≈2.7 jam) — BUKAN batas kerja
+	autoContDelim          = "\n===TUGAS===\n"
 )
 
 type httpResp struct {
@@ -172,6 +173,57 @@ func handleMessage(argsJSON string) {
 // callLLM — TOOL-LOOP autonomus (inti standar Flowork). Persona DB + DNA (self-prompt
 // render) jadi system; tools dari subscription. Loop: LLM → tool → feed → ulang, dengan
 // ghost-guard + time-bound + auto-continue. Balik teks final (atau konfirmasi lanjutan).
+// callRouterRetry — ITEM 4 resilience: panggil router LLM dgn RETRY exp-backoff buat error TRANSIENT
+// (jaringan/timeout/5xx/429/408), TRANSPARAN ke loop. Fatal (4xx selain 429/408) → balik langsung, NO
+// retry. Akar fix "router error → loop muter". Prinsip Claude (withRetry.ts). Switch: FLOWORK_ROUTER_RETRY
+// (default 5). DI TEMPLATE = SEMUA ant baru lahir tahan-banting.
+func callRouterRetry(reqJSON []byte) (*httpResp, error) {
+	maxAtt := 5
+	if v := strings.TrimSpace(os.Getenv("FLOWORK_ROUTER_RETRY")); v != "" {
+		if n := atoiSafe(v); n >= 1 {
+			maxAtt = n
+		}
+	}
+	hdr := map[string]string{"Content-Type": "application/json"}
+	var lastErr error
+	for att := 1; att <= maxAtt; att++ {
+		resp, err := fetch("POST", routerURL, hdr, reqJSON, 240000)
+		if err == nil && resp != nil && resp.Status < 400 {
+			return resp, nil
+		}
+		transient := err != nil || resp == nil || resp.Status >= 500 || resp.Status == 429 || resp.Status == 408
+		if !transient {
+			return resp, fmt.Errorf("router fatal HTTP %d (ga di-retry)", resp.Status)
+		}
+		lastErr = err
+		if att >= maxAtt {
+			break
+		}
+		d := 500 << uint(att-1)
+		if d > 30000 {
+			d = 30000
+		}
+		jitter := int(hostTimeNowMs() % uint64(d/4+1))
+		time.Sleep(time.Duration(d+jitter) * time.Millisecond)
+	}
+	if lastErr != nil {
+		return nil, fmt.Errorf("router ga nyambung setelah %d retry: %v", maxAtt, lastErr)
+	}
+	return nil, fmt.Errorf("router error (5xx) setelah %d retry", maxAtt)
+}
+
+// atoiSafe — parse int sederhana (wasip1-safe). Balik -1 kalau invalid.
+func atoiSafe(s string) int {
+	n := 0
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return -1
+		}
+		n = n*10 + int(c-'0')
+	}
+	return n
+}
+
 func callLLM(cfg agentConfig, userText string) string {
 	sys := cfg.Prompt
 	if dna := fetchSelfPrompt(); dna != "" { // konstitusi sacred + doktrin (anti-halu/sync-honest/autonomy-mode)
@@ -207,9 +259,9 @@ func callLLM(cfg agentConfig, userText string) string {
 			reqMap["parallel_tool_calls"] = false // 1 tool/iter → router aman (anti 400 multi tool_result)
 		}
 		reqJSON, _ := json.Marshal(reqMap)
-		resp, err := fetch("POST", routerURL, map[string]string{"Content-Type": "application/json"}, reqJSON, 240000)
+		resp, err := callRouterRetry(reqJSON) // ITEM 2/4: retry-backoff transient (transparan ke loop)
 		if err != nil || resp == nil {
-			return "router error"
+			return "Maaf, router LLM lagi ga stabil — udah gw coba ulang beberapa kali tapi belum nyambung. Coba lagi sebentar ya."
 		}
 		var o struct {
 			Choices []struct {

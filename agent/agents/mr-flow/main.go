@@ -806,8 +806,21 @@ func callLLM(cfg agentConfig, userText string, history []chatTurn, notifyChatID 
 		// (itu salah request kita). Max 3 attempt.
 		resp, err := fetch("POST", cfg.Router.URL,
 			map[string]string{"Content-Type": "application/json"}, body, 90_000)
-		for attempt := 1; attempt < 3 && (err != nil || (resp != nil && resp.Status >= 500)); attempt++ {
-			fmt.Fprintf(os.Stderr, "["+selfID()+"] router transient (attempt %d), retry…\n", attempt)
+		// ITEM 4 resilience: retry transient (5xx/429/408/net) exp-backoff+jitter (was: 3× TANPA backoff
+		// = hammer router). Fatal 4xx lain ga di-retry. Prinsip Claude withRetry.ts. Switch FLOWORK_ROUTER_RETRY.
+		maxRtry := 5
+		if v := strings.TrimSpace(os.Getenv("FLOWORK_ROUTER_RETRY")); v != "" {
+			if n := atoiSafe(v); n >= 1 {
+				maxRtry = n
+			}
+		}
+		for attempt := 1; attempt < maxRtry && (err != nil || (resp != nil && (resp.Status >= 500 || resp.Status == 429 || resp.Status == 408))); attempt++ {
+			d := 500 << uint(attempt-1)
+			if d > 30000 {
+				d = 30000
+			}
+			time.Sleep(time.Duration(d+int(hostTimeNowMs()%uint64(d/4+1))) * time.Millisecond)
+			fmt.Fprintf(os.Stderr, "["+selfID()+"] router transient (attempt %d, backoff %dms), retry…\n", attempt, d)
 			resp, err = fetch("POST", cfg.Router.URL,
 				map[string]string{"Content-Type": "application/json"}, body, 90_000)
 		}
@@ -1837,6 +1850,18 @@ func truncStr(s string, n int) string {
 		return s
 	}
 	return s[:n] + "…"
+}
+
+// atoiSafe — parse int sederhana (wasip1-safe). Balik -1 kalau invalid. Dipake retry-backoff (ITEM 4).
+func atoiSafe(s string) int {
+	n := 0
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return -1
+		}
+		n = n*10 + int(c-'0')
+	}
+	return n
 }
 
 // friendlyLLMError — terjemahin error mentah dari callLLM (router 502, JSON
