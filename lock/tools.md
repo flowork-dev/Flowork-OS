@@ -165,6 +165,38 @@ Kalau kebutuhan lo ada di tabel → kerjain di kolom tengah, SELESAI, ga usah un
 
 ---
 
+## 7.5 ⭐ DEFERRED-TOOLS (#2C — lever token #1, emulasi Claude Code di prompt-space)
+
+**Masalah akar:** 56 schema tool di-expose tiap turn = ~8.76k token (~55% prompt) × 1000 semut = beban statis meledak. **Solusi (niru Claude Code "deferred tools", TAPI model lokal gak punya `defer_loading` API → ditiru di PROMPT):** cuma **alwaysLoad** (core ~16 + `tool_lookup` + primaryVital subscribed) yang kirim **schema PENUH**; sisanya (ekor subscription/sidecar) cuma diumumin **NAMA + hint** di KATALOG (disisipin ke deskripsi `tool_search`). Diukur: **29k→13.8k byte (~52% potong)**, mr-flow liat 73 tool (vs 56 kepotong cap).
+
+**Cara tool deferred jadi CALLABLE (akar "ga ada meta-runner"):** llama `--jinja` cuma ngebolehin model manggil function yang ADA di array `tools`; tool deferred gak di array = gak bisa dipanggil. **Mekanisme (3 bagian):**
+1. **Announce** (`tool_specs.go` `ToolSpecsHandler`, editable): katalog nama+hint di deskripsi `tool_search`.
+2. **Activate** (`agentmgr.go` `ToolRunHandler`, editable): model `tool_lookup{name}` → tandai tool "active" (`activateDeferred`, in-memory per-agent) → `ToolSpecsHandler` kirim schema penuhnya next fetch.
+3. **Re-fetch SEAM** (`agents/mr-flow/main.go`, FROZEN — Rule 7, ~6 baris, NOL ubah logika loop): abis `tool_lookup` → `toolSpecs = fetchToolSpecs()` → tool active MASUK array → grammar bisa manggil iterasi berikut. VERIFIED Rule-9 (model `tool_lookup{git}`→`git{op:status}` callable→jawaban koheren, nol flail).
+
+**SWITCH:** ENV `FLOWORK_DEFER_TOOLS` (default OFF = byte-identik perilaku lama). **Scoped ke PRIMARY** (`isPrimary`, kode 2026-06-25) → cuma mr-flow yg defer sampe agentkit warisan seam ke semua agent (agen lain full-schema, aman). ⚠️ **ENV = prototipe-dev doang.** Versi PERMANEN (doktrin "GUI=kebenaran-utama, hardcode haram") = **toggle per-agent di GUI** (tab tool-catalog) + tampil X-loaded/Y-deferred.
+
+**⚠️ WARISAN belum lengkap:** seam baru di `mr-flow/main.go`. 5 agen lain + `agent-template` punya loop ke-COPY (gak ada seam + gak ada flail-guard) → nyalain defer global = mereka flail. **Cabut-akar (Rule 5/6): extract `agentkit`** (loop+guards+seam jadi package shared → semua agent+template warisan, mirror host FASE-B). Sampe itu landing, defer SCOPED ke mr-flow. Host-side (announce+activate) udah agent-agnostic (jalan buat semua). Detail: `KERNEL_FREEZE.md` entri 2026-06-25 #2C.
+
+---
+
+## 7.6 ⭐ ALL-TOOLS — "buang subscription-gating" (arah owner, PROVEN mr-flow 2026-06-25)
+
+**Ide owner:** subscription-gating = footgun ("lupa centang GUI → agent lumpuh") + kita gak tau agent butuh tool apa kelak. **Solusi:** buang gating exposure → SEMUA tool ke-registry ke-expose (nama murah via #2C katalog); pilihan tool dikemudiin **DOKTRIN + INSTING + KONSTITUSI**, bukan allowlist statik. AMAN karena **exposure ≠ permission**.
+
+**Lapis keamanan (INDEPENDEN subscription) — divalidasi 2026-06-25:**
+- `filterPrivilegedCaps` (kernelhost) strip cap bahaya dari agent non-`FLOWORK_PRIVILEGED_AGENTS`.
+- `SandboxRun` Gate-1 cap-check: tool ber-`Capability()` yg agent gak punya → `ErrSandboxCapDenied`, Run TAK jalan. (komentar `agentmgr.go` "Phase 1 belum enforce" = STALE.)
+- **Bukti live:** non-priv (`fb-repofinder` loaded, group-ON) → `git`/`system_power` DENIED; mr-flow (priv) ALLOWED. + **regression test 4/4** `internal/tools/sandbox_cap_test.go`. ⚠️ konsekuensi: tiap tool BAHAYA WAJIB declare `Capability()` (yg cap="" GAK di-gate).
+
+**SWITCH:** `FLOWORK_EXPOSE_ALL_TOOLS` (default OFF; efektif bareng defer + primary). ON → kandidat = `tools.ListSummaries()` (semua ~202), bukan subscription. `add()` tetep hormati IsPrimaryOnlyTool/IsPrivate/cap-limit (`deferAnnounceMax`=256).
+
+**Cap-source (PRA-SYARAT):** subscription dulu DOBEL-fungsi (exposure + auto-grant-cap utk privileged, `main.go:842 grantSubscribedToolCaps`). Buang subscription = cap kudu dari **manifest `capabilities_required`** (`kernelhost.go:313` filterPrivilegedCaps→Broker.Approve). mr-flow: 4 cap (`exec:shell`/`fs:read:/shared/*`/`fs:write:/shared/*`/`net:fetch:telegram`) DI-MIGRASI ke manifest (20→24 cap, re-frozen). `grantSubscribedToolCaps` no-op kalau subs kosong → NOL edit frozen. (operator-*/mr-flow-next belum deploy → skip.)
+
+**PROVEN mr-flow:** liat 202 tool (22 schema + 180 katalog), tool non-sub (`decision_count`) lookup+run OK, Rule-9 LLM koheren+akurat NOL flail walau 180 nama. Agen lain gak kena (scoped primary). **GLOBAL** butuh **agentkit** dulu (semua agent punya seam) + **insting/konstitusi kuat** (kemudi pilih dari 200 tool).
+
+---
+
 ## 8. FILE MAP — frozen vs non-frozen
 
 ### 🔒 FROZEN tools-core (6 file — chattr +i + hash KERNEL_FREEZE.md, header nunjuk dok ini)

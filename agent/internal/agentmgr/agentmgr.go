@@ -840,6 +840,16 @@ func ToolRunHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	// #2C deferred-activate: tool_lookup{name} sukses → tandain tool itu "active" biar
+	// ToolSpecsHandler kirim schema PENUH-nya (masuk array → grammar llama bisa manggil).
+	// Kebijakan via resolveDeferPolicy (no-op kalau defer off utk agent ini). main.go re-fetch abis lookup.
+	if defOn, _ := resolveDeferPolicy(id, IsPrimaryAgent(id)); defOn && toolName == "tool_lookup" {
+		if ln, _ := body.Args["name"].(string); strings.TrimSpace(ln) != "" {
+			if lt, ok := tools.Lookup(strings.TrimSpace(ln)); ok {
+				activateDeferred(id, lt.Name())
+			}
+		}
+	}
 	httpx.WriteJSON(w, map[string]any{
 		"ok":         true,
 		"tool_name":  toolName,

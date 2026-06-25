@@ -31,7 +31,11 @@
     "rpc:router:skill",
     "rpc:router:brain",
     "rpc:taskflow",
-    "rpc:agent-invoke"
+    "rpc:agent-invoke",
+    "exec:shell",
+    "fs:read:/shared/*",
+    "fs:write:/shared/*",
+    "net:fetch:telegram"
   ],
   "exposes_rpc": [
     {

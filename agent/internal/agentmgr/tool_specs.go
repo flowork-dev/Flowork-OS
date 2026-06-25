@@ -31,6 +31,16 @@
 //   16 (core-only): 56→16 tool, ukur ~10.7k→~2.0k byte schema (~8.7k tok hemat). NON-chattr
 //   (file tuning, header-lock honor-system). Arsitektur: `lock/FLoworkInstincts.md` §0.5.
 //
+// MODIFIED 2026-06-25 (owner-approved, #2C deferred-tools PROTOTIPE — emulasi prompt-space ala
+//   Claude Code). AKAR studi: `defer_loading`/`tool_reference` Claude Code itu API-native (server
+//   Anthropic yg nyaring schema) → model LOKAL (llama.cpp OpenAI-compat) GA punya → wajib ditiru
+//   di PROMPT. SWITCH ENV `FLOWORK_DEFER_TOOLS` (default OFF = byte-identik perilaku lama, additive).
+//   ON: alwaysLoad (core + primaryVital) kirim schema PENUH; ekor (sub/sidecar) cuma diumumin
+//   NAMA+hint di KATALOG yg disisipin ke deskripsi `tool_search` (channel yg main.go FROZEN tetap
+//   forward). Model ambil param via `tool_lookup{name}` (di-core-kan SAAT defer) → panggil tool
+//   (ToolRunHandler lookup REGISTRY PENUH → non-exposed TETAP callable). Reversible instan (unset
+//   ENV, tanpa rebuild). Ga ada perubahan ke file FROZEN. Ukur before/after byte schema.
+//
 // tool_specs.go — Fase 0 (tool-calling loop): endpoint yang balikin tools yang
 // di-EXPOSE ke LLM dalam format OpenAI function-schema. Host yang bangun schema
 // (punya registry + subscription); WASM agent tinggal fetch + forward ke LLM.
@@ -104,6 +114,9 @@ func maxExposedToolsLimit() int {
 	return maxExposedToolsDefault
 }
 
+// #2C deferred-tools + all-tools: MEKANISME-nya DI-EKSTRAK ke `tool_specs_defer.go` (FROZEN).
+// Switch: ENV FLOWORK_DEFER_TOOLS/EXPOSE_ALL_TOOLS atau RegisterDeferPolicy (per-agent, no unfreeze).
+
 // primaryExtraTools — surface-vocabulary tools exposed ONLY to the primary
 // orchestrator (mr-flow), not to ants. These cover shell/task-lifecycle/schedule/
 // structured-output/orchestration that a coordinator needs. Kept off the ants'
@@ -162,7 +175,15 @@ func ToolSpecsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	isPrimary := IsPrimaryAgent(id)
+	// kebijakan defer/all-tools dari resolveDeferPolicy (tool_specs_defer.go, FROZEN): ENV
+	// scoped-primary by-default, ATAU hook RegisterDeferPolicy (per-agent GUI/kv, no unfreeze).
+	deferOn, exposeAll := resolveDeferPolicy(id, isPrimary)
 	limit := maxExposedToolsLimit() // SWITCH ENV (Rule 7) — baca sekali per-request.
+	if deferOn {
+		// #2C: schema cuma buat alwaysLoad (~17) → cap-56 ga relevan lagi. Naikin batas
+		// biar SEMUA tool ke-subscribe ke-ANNOUNCE namanya (bukan kepotong cap = buta).
+		limit = deferAnnounceMax
+	}
 	exposed := map[string]bool{}
 	ordered := []string{}
 	add := func(n string) {
@@ -194,7 +215,16 @@ func ToolSpecsHandler(w http.ResponseWriter, r *http.Request) {
 		add(n)
 	}
 	// 2. tool yang di-subscribe MANUAL (owner pilih di popup) — di luar default seed.
-	if store, err := openAgentStore(id); err == nil {
+	//    ATAU (arah owner "buang subscription"): mode all-tools (defer+primary+switch) →
+	//    expose SEMUA tool registry, bukan cuma subscription.
+	if deferOn && exposeAll {
+		// #2C + all-tools: buang gating subscription → mr-flow raih tool APAPUN (nama murah
+		// via katalog). CAP-GATE pas run yg jaga; doktrin/insting jadi kemudi. `add()` tetep
+		// hormati IsPrimaryOnlyTool / IsPrivate / cap-limit (deferAnnounceMax).
+		for _, s := range tools.ListSummaries() {
+			add(s.Name)
+		}
+	} else if store, err := openAgentStore(id); err == nil {
 		if subs, serr := store.ListSubscriptions(); serr == nil {
 			for _, s := range subs {
 				if s.Source != "" && !strings.EqualFold(s.Source, "default") {
@@ -205,13 +235,55 @@ func ToolSpecsHandler(w http.ResponseWriter, r *http.Request) {
 		store.Close()
 	}
 
-	specs := make([]map[string]any, 0, len(ordered))
-	for _, n := range ordered {
-		if t, ok := tools.Lookup(n); ok {
-			specs = append(specs, toOpenAIToolSchema(t))
+	// #2C: kalau defer ON, cuma alwaysLoad (core + tool_lookup + primaryVital utk primary)
+	// yang dikirim schema PENUH; sisanya diumumin NAMA+hint di katalog.
+	always := map[string]bool{}
+	if deferOn {
+		for _, n := range coreExposedTools {
+			always[n] = true
+		}
+		always[deferFetchTool] = true // primitif ambil-schema
+		if isPrimary {
+			for _, n := range primaryVitalTools {
+				always[n] = true
+			}
 		}
 	}
-	httpx.WriteJSON(w, map[string]any{"tools": specs, "count": len(specs)})
+
+	specs := make([]map[string]any, 0, len(ordered))
+	deferredLines := make([]string, 0)
+	emitted := map[string]bool{}
+	for _, n := range ordered {
+		t, ok := tools.Lookup(n)
+		if !ok {
+			continue
+		}
+		if !deferOn || always[n] || isActiveDeferred(id, n) {
+			// alwaysLoad ATAU udah di-lookup model (active) → schema penuh (callable).
+			specs = append(specs, toOpenAIToolSchema(t))
+			emitted[n] = true
+		} else {
+			deferredLines = append(deferredLines, deferCatalogLine(t))
+		}
+	}
+
+	if deferOn {
+		// pastikan primitif tool_lookup ke-expose (mungkin gak ke-subscribe).
+		if !emitted[deferFetchTool] {
+			if t, ok := tools.Lookup(deferFetchTool); ok {
+				specs = append(specs, toOpenAIToolSchema(t))
+			}
+		}
+		if len(deferredLines) > 0 {
+			injectDeferredCatalog(specs, deferredLines)
+		}
+	}
+
+	resp := map[string]any{"tools": specs, "count": len(specs)}
+	if deferOn {
+		resp["deferred_count"] = len(deferredLines)
+	}
+	httpx.WriteJSON(w, resp)
 }
 
 // toOpenAIToolSchema — konversi tools.Schema → OpenAI function-calling schema.

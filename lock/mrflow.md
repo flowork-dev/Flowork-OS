@@ -101,7 +101,7 @@ Edit main.go (frozen) butuh: chattr -i → edit → rebuild wasm → deploy → 
 
 | File | Peran | Freeze |
 |---|---|---|
-| `agents/mr-flow/main.go` | core: long-poll, loop, LLM, sendMessage, struct Message | **FROZEN** brain-core |
+| `agents/mr-flow/main.go` | core: long-poll, loop, LLM, sendMessage, struct Message, **seam #2C deferred-tools** (re-fetch specs abis `tool_lookup` → tool deferred masuk array, lihat `lock/tools.md §7.5`) | **FROZEN** brain-core (hash `26769416…`) |
 | `agents/mr-flow/telegram_media.go` | CABANG: format + media handler + switch | NON-frozen |
 | `agents/mr-flow/recall_gate.go`, `working_set.go`, `recovery_capture.go` | recall/context | (lihat status masing2) |
 | `agent.wasm` | artifact build (gitignored) | — |
@@ -131,6 +131,15 @@ Edit main.go (frozen) butuh: chattr -i → edit → rebuild wasm → deploy → 
 - **Dokumen binary (PDF/docx) belum dibaca isinya** — cuma teks (txt/md/code/json/csv). **TODO (opsional):**
   extractor PDF (di host-side tool, bukan WASM) kalau perlu.
 - Semua di atas **GRACEFUL** sekarang (ga crash, selalu balas) — aman dipakai walau belum penuh.
+
+### ARAH BESAR — buang subscription-gating (PROVEN mr-flow 2026-06-25; GLOBAL nunggu agentkit)
+Owner usul: **buang gating subscription tool** (footgun "lupa centang GUI → agent lumpuh") → **SEMUA tool ke-expose nama-nya** (murah, lewat #2C deferred-katalog) + pilihan tool dikemudiin **DOKTRIN+INSTING+KONSTITUSI** (bukan allowlist statik). AMAN sebab **exposure ≠ permission**: tool bahaya tetep ke-gate cap pas RUN (`filterPrivilegedCaps` + `SandboxRun` Gate-1, INDEPENDEN subscription) — **divalidasi live + regression test 4/4**.
+
+**STATUS mr-flow (SUDAH):**
+- **Cap migrasi ke manifest** (langkah-3): 4 cap (`exec:shell`/`fs:read:/shared/*`/`fs:write:/shared/*`/`net:fetch:telegram`) ditambah ke `capabilities_required` (20→24) → mr-flow gak gantung subscription buat cap. Manifest re-frozen. (`net:fetch:telegram` KRITIS = I/O Telegram.)
+- **All-tools ON** (langkah-4, switch `FLOWORK_DEFER_TOOLS`+`FLOWORK_EXPOSE_ALL_TOOLS`, scoped primary): mr-flow liat **202 tool** (22 schema + 180 katalog), tool non-sub bisa lookup+run, **Rule-9 LLM koheren NOL flail**. Agen lain gak kena.
+
+**SISA (GLOBAL):** (1) **agentkit** — semua agent punya seam (sekarang cuma mr-flow); (2) perkuat insting/konstitusi (roadmap #2/#2B) sbg kemudi pilih dari 200 tool; (3) GUI tool-catalog → repurpose ke kurasi doktrin/insting + toggle per-agent (ganti ENV). Detail tool: `lock/tools.md §7.5–7.6`.
 
 ---
 

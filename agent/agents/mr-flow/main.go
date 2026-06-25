@@ -931,6 +931,13 @@ func callLLM(cfg agentConfig, userText string, history []chatTurn, notifyChatID 
 		msgs = append(msgs, map[string]any{
 			"role": "tool", "tool_call_id": id, "content": result,
 		})
+		// #2C deferred-activate (seam, Rule 7): abis tool_lookup, ambil-ulang specs biar
+		// tool yg baru di-discover MASUK array `tools` → grammar llama bisa manggilnya
+		// iterasi berikut. HOST-gated (ToolSpecsHandler cuma nambah saat FLOWORK_DEFER_TOOLS
+		// on + tool udah di-lookup) → no-op kalau defer off.
+		if tc.Function.Name == "tool_lookup" {
+			toolSpecs = fetchToolSpecs()
+		}
 		// FLAIL-GUARD (flail_guard.go): mantok = tool SAMA berulang tanpa progress
 		// (lolos ghost-guard + captureRecovery). Koreksi keras bounded → kalau tetep
 		// mantok lewat batas, eskalasi JUJUR ke owner (bukan hard-stop, bukan ngarang).
