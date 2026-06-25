@@ -368,7 +368,7 @@ func runDaemon() {
 			}
 			// Anti-halu: routing deterministik — pesan jelas minta analisa kategori
 			// yang ADA → trigger crew LANGSUNG, skip LLM (reliable lepas dari model/kuota).
-			if cat, subj, rok := deterministicRoute(u.Message.Text); rok {
+			if cat, subj, rok := deterministicRoute(u.Message.Text); rok && !wantsSelfHandle(u.Message.Text) {
 				_ = runTool("task_run", map[string]any{
 					"category": cat, "subject": subj,
 					"notify_chat_id": strconv.FormatInt(chatID, 10),
@@ -387,7 +387,7 @@ func runDaemon() {
 			// Keyword MISS → FORCED CLASSIFIER: nangkep maksud lintas-bahasa +
 			// aset global (saham US, koin apapun) yang keyword ga kekejar. LLM
 			// dipaksa (tool_choice) → reliable, dispatch tetep di kode.
-			if cat, subj, rok := classifyRoute(cfg, u.Message.Text); rok {
+			if cat, subj, rok := classifyRoute(cfg, u.Message.Text); rok && !wantsSelfHandle(u.Message.Text) {
 				_ = runTool("task_run", map[string]any{
 					"category": cat, "subject": subj,
 					"notify_chat_id": strconv.FormatInt(chatID, 10),
@@ -1770,7 +1770,8 @@ func doHandle(argsRaw string) {
 	}
 	logInteraction("rpc", "in", actor, in.Text, map[string]any{})
 	// Anti-halu routing deterministik (parity dgn Telegram path).
-	if cat, subj, rok := deterministicRoute(in.Text); rok {
+	// SELF-HANDLE GATE (self_handle_ext.go): owner minta kerjain-sendiri → skip route.
+	if cat, subj, rok := deterministicRoute(in.Text); rok && !wantsSelfHandle(in.Text) {
 		_ = runTool("task_run", map[string]any{"category": cat, "subject": subj})
 		dr := "Oke, gw nyalain crew " + cat + " buat analisa \"" + subj + "\" — riset beneran lewat crew. Hasil nyusul."
 		logInteraction("rpc", "out", actor, dr, map[string]any{"source": "deterministic_route"})
@@ -1778,7 +1779,7 @@ func doHandle(argsRaw string) {
 		return
 	}
 	// Keyword MISS → FORCED CLASSIFIER (parity dgn Telegram path).
-	if cat, subj, rok := classifyRoute(loadConfig(), in.Text); rok {
+	if cat, subj, rok := classifyRoute(loadConfig(), in.Text); rok && !wantsSelfHandle(in.Text) {
 		_ = runTool("task_run", map[string]any{"category": cat, "subject": subj})
 		dr := "Oke, gw nyalain crew " + cat + " buat \"" + subj + "\" — riset beneran lewat crew. Hasil nyusul."
 		logInteraction("rpc", "out", actor, dr, map[string]any{"source": "forced_classifier", "category": cat, "subject": subj})
