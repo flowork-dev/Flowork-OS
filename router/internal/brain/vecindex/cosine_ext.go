@@ -1,5 +1,5 @@
-// === GROWTH-POINT (NON-frozen) — 2026-06-26 ===
-// Owner: Aola Sahidin (Mr.Dev) · Repo: https://github.com/flowork-os/Flowork-OS
+// === FROZEN 2026-06-26 · Owner: Aola Sahidin (Mr.Dev) · github.com/flowork-os/Flowork-OS ===
+// ⚠️ FROZEN — jangan edit. Stabil+teruji. Extend lewat sibling baru, BUKAN file ini. lock/semantic.md
 //
 // cosine_ext.go — pulihin COSINE ABSOLUT dari skor int8-dot mentah hasil Search.
 //

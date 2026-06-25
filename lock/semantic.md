@@ -128,8 +128,8 @@ knowledge apapun → otomatis ke-recall by-makna dalam ≤2 menit, TANPA rebuild
 | `router/internal/brain/fresh_index.go` | fresh-index core (`RebuildFreshIndex`/`freshRetrieve`) | LOCKED soft |
 | `router/internal/brain/fresh_index_ext.go` | lebarin `freshMemTypes` (auto-semantic semua tipe) + ENV switch | **FROZEN** |
 | `router/internal/brain/vecindex/ann.go` | index vektor (`Build`/`Search`) + `Quantize` 8-bit | — |
-| `router/internal/brain/vecindex/cosine_ext.go` | int8-dot mentah → cosine ABSOLUT (`(*Index).Cosine`) | NON-frozen |
-| `router/internal/brain/semantic_threshold_ext.go` | `SemanticRetrieveScored` (cosine absolut + lantai relevansi) | NON-frozen |
+| `router/internal/brain/vecindex/cosine_ext.go` | int8-dot mentah → cosine ABSOLUT (`(*Index).Cosine`) | **FROZEN** 2026-06-26 |
+| `router/internal/brain/semantic_threshold_ext.go` | `SemanticRetrieveScored` (cosine absolut + lantai relevansi) | **FROZEN** 2026-06-26 |
 | `router/handlers_brain_views.go` | handler search pakai scored+lantai (`searchMinCosine`) | NON-frozen |
 | `router/cmd/brain-reembed` · `cmd/brain-buildindex` | re-embed + build vindex | soft-lock |
 | Data: `router/brain/flowork-brain.sqlite` · `brain.vindex` · `_rag/…vec-v2.sqlite` | korpus + index + vec | gitignored |

@@ -27,12 +27,12 @@ pakai default-nya sendiri. Cuma kelola `FLOWORK_*` (key lain spt PATH ga disentu
 ## FILE
 | File | Peran | Status |
 |---|---|---|
-| `router/internal/fwswitch/fwswitch.go` | core Apply/Boot/watcher (router) | NON-frozen |
-| `router/fwswitch_boot.go` | `init()` → `Boot()` di package main (router/main.go ga disentuh) | NON-frozen |
-| `agent/internal/fwswitch/fwswitch.go` | core (kembaran; modul terpisah → duplikat sengaja) | NON-frozen |
-| `agent/internal/fwswitch/registry.go` | **registry kurasi switch** (metadata GUI) + `Resolve()` (sumber gui/env/default) | NON-frozen |
-| `agent/fwswitch_ext.go` | `init()` Boot + endpoint `/api/settings/switches` (GET resolve, POST tulis file) | NON-frozen |
-| `agent/web/tabs/settings.js` | segmen GUI "🎛️ Switch Fitur" (toggle/number + badge sumber + simpan diff) | NON-frozen |
+| `router/internal/fwswitch/fwswitch.go` | core Apply/Boot/watcher (router) | **FROZEN** 2026-06-26 |
+| `router/fwswitch_boot.go` | `init()` → `Boot()` di package main (router/main.go ga disentuh) | **FROZEN** 2026-06-26 |
+| `agent/internal/fwswitch/fwswitch.go` | core (kembaran; modul terpisah → duplikat sengaja) | **FROZEN** 2026-06-26 |
+| `agent/internal/fwswitch/registry.go` | **registry kurasi switch** (metadata GUI) + `Resolve()` (sumber gui/env/default) — **EXTENSION POINT** | NON-frozen (sengaja) |
+| `agent/fwswitch_ext.go` | `init()` Boot + endpoint `/api/settings/switches` (GET resolve, POST tulis file) | **FROZEN** 2026-06-26 |
+| `agent/web/tabs/settings.js` | segmen GUI "🎛️ Switch Fitur" (toggle/number + badge sumber + simpan diff) | NON-frozen (GUI) |
 | `~/.flowork/flowork_settings.json` | data user lintas-proses (gitignored, di luar repo) | runtime |
 
 ## NAMBAH SWITCH BARU (plug-and-play)

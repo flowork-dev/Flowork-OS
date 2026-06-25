@@ -1,6 +1,6 @@
-// fwswitch_ext.go — GROWTH-POINT (NON-frozen). Boot plug-and-play settings (lihat
-// internal/fwswitch) + endpoint GUI /api/settings/switches. init() → Boot() jalan sebelum
-// main() (agent/main.go FROZEN, ga disentuh). Lihat lock/fwswitch.md.
+// fwswitch_ext.go — ⚠️ FROZEN 2026-06-26 (boot + endpoint; nambah switch lewat registry.go,
+// BUKAN file ini). Boot plug-and-play settings (lihat internal/fwswitch) + endpoint GUI
+// /api/settings/switches. init() → Boot() jalan sebelum main() (agent/main.go FROZEN). lock/fwswitch.md.
 package main
 
 import (

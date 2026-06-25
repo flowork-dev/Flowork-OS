@@ -1,5 +1,5 @@
-// === GROWTH-POINT (NON-frozen) — 2026-06-26 ===
-// Owner: Aola Sahidin (Mr.Dev) · Repo: https://github.com/flowork-os/Flowork-OS
+// === FROZEN 2026-06-26 · Owner: Aola Sahidin (Mr.Dev) · github.com/flowork-os/Flowork-OS ===
+// ⚠️ FROZEN — jangan edit. Stabil+teruji. Switch lantai via FLOWORK_SEARCH_MINSCORE. lock/semantic.md
 //
 // semantic_threshold_ext.go — RETRIEVE dgn LANTAI RELEVANSI ABSOLUT.
 //

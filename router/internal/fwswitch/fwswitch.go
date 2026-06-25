@@ -1,4 +1,5 @@
-// fwswitch — GROWTH-POINT (NON-frozen). Plug-and-play settings (Rule 6): switch fitur
+// fwswitch — ⚠️ FROZEN 2026-06-26 (core; extend lewat agent registry.go + file GUI, BUKAN file ini).
+// Plug-and-play settings (Rule 6): switch fitur
 // FLOWORK_* dikelola dari GUI Setting, BUKAN file env edit-tangan (flowork.local.env yg
 // invisible buat user install fresh).
 //
