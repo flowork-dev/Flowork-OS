@@ -1,6 +1,6 @@
 # `agents/mr-flow/` — SOURCE KERJA mr-flow (EDIT DI SINI)
 
-> ⚠️ JANGAN KETUKER sama `agents/mr-flow.fwagent/` (snapshot lama) atau
+> ⚠️ JANGAN KETUKER sama `agents/mr-flow.fwagent/` (SEED fresh-install — wasm current) atau
 > `~/.flowork/agents/mr-flow.fwagent/` (yang beneran ke-load). Baca ini dulu.
 
 ## Dir ini APA
@@ -41,8 +41,8 @@ rm agent.wasm                      # repo ga simpan wasm
 | Lokasi | Apa | Edit? | Ke-load? |
 |---|---|---|---|
 | `agents/mr-flow/` (DIR INI) | **source current** + state.db live | ✅ YA | ❌ (build dulu) |
-| `agents/mr-flow.fwagent/` | snapshot LAMA (436 baris, Jun 12) | ❌ stale | ❌ |
+| `agents/mr-flow.fwagent/` | **SEED fresh-install** (wasm current = deployed; start.sh seed ke ~/.flowork) | ❌ (refresh dari live) | ❌ (di-seed only-if-absent) |
 | `~/.flowork/agents/mr-flow.fwagent/` | wasm DEPLOYED | ❌ (hasil build) | ✅ YA |
 
-> Beda dari **`mr-flow-next`** = agent LAIN (orchestrator R3, `~/.flowork/agents/
-> mr-flow-next.fwagent`). mr-flow ≠ mr-flow-next.
+> Beda dari **`mr-flow-next`** = rencana orchestrator R3, TAPI BELUM ke-deploy → default
+> channel di-revert ke mr-flow via ENV `FLOWORK_ORCHESTRATOR` (lihat `lock/mrflow.md §6b`).
