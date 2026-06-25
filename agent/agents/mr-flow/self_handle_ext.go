@@ -41,11 +41,26 @@ func init() {
 	}
 }
 
-// wantsSelfHandle — true kalau owner eksplisit minta mr-flow KERJAIN SENDIRI (nolak delegasi
-// ke crew/agent). Dipanggil dari main.go (frozen) buat GATE routing pre-classifier.
+// systemRelayMarkers — pesan SISTEM/RELAY (notif forwarder) yang HARAM masuk routing pre-classifier.
+// AKAR: FlowAlpha notif ("dumb notification forwarder, reply with ONLY the message") ke-MIS-ROUTE
+// jadi nyalain crew crypto gara2 keyword (BTCUSDT). Marker ini bikin route di-SKIP → callLLM forward
+// notif APA-ADANYA. Substring lowercase, tight (frasa khas relay, minim false-positive).
+var systemRelayMarkers = []string{
+	"system relay", "[system relay", "not a user request", "dumb notification forwarder",
+	"notification forwarder", "reply with only the message", "your entire reply must", "you are a forwarder",
+}
+
+// wantsSelfHandle — true kalau pesan HARAM masuk auto-route: owner minta KERJAIN SENDIRI (nolak
+// delegasi crew/agent) ATAU pesan = SYSTEM-RELAY/notif (forward apa-adanya). Dipanggil dari main.go
+// (frozen) buat GATE routing pre-classifier (deterministicRoute + classifyRoute).
 func wantsSelfHandle(text string) bool {
 	low := strings.ToLower(text)
 	for _, p := range selfHandlePhrases {
+		if strings.Contains(low, p) {
+			return true
+		}
+	}
+	for _, p := range systemRelayMarkers {
 		if strings.Contains(low, p) {
 			return true
 		}
