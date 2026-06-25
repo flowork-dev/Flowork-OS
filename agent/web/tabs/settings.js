@@ -127,6 +127,7 @@ const KEY_PRESETS = [
 const SEGMENTS = [
   { key: 'account', label: () => t('menu.tab.settings.seg_account'), render: renderAccount },
   { key: 'keys', label: () => t('menu.tab.settings.seg_keys'), render: renderKeys },
+  { key: 'switches', label: () => '🎛️ Switch Fitur', render: renderSwitches },
   { key: 'router', label: () => t('menu.tab.settings.seg_router'), render: renderRouterDefault },
   { key: 'notify', label: () => t('menu.tab.settings.seg_notify'), render: renderNotify },
   { key: 'finance', label: () => t('menu.tab.settings.seg_finance'), render: renderFinance },
@@ -320,6 +321,67 @@ async function renderKeys(panel) {
       await reload();
     } catch (e) { msg.className = 'set-msg err'; msg.textContent = cleanErr(e); }
   });
+  await reload();
+}
+
+// ── Switch Fitur (plug-and-play; ganti flowork.local.env) ───────────────────
+// Switch perilaku FLOWORK_* yg DULU kebawa di flowork.local.env (invisible buat user fresh).
+// Sekarang dari sini → ditulis ~/.flowork/flowork_settings.json (lintas-proses, dibaca router
+// :2402 + host :1987). Presedensi: GUI menang > ENV > default. Sumber tiap switch di-badge.
+async function renderSwitches(panel) {
+  panel.innerHTML = `<div class="set-card"><h3>🎛️ Switch Fitur</h3>
+    <div class="sub">Toggle perilaku Flowork — ganti edit <code>flowork.local.env</code> manual.
+    Berlaku ke router & host (live ≤3 dtk). Badge: <b>gui</b>=dari sini · <b>env</b>=dari ENV · <b>default</b>=bawaan.</div>
+    <div id="swList" class="sub">Loading…</div></div>`;
+  const list = panel.querySelector('#swList');
+  const badge = (src) => {
+    const c = src === 'gui' ? '#22c55e' : src === 'env' ? '#f59e0b' : '#64748b';
+    return `<span style="font-size:0.66rem;padding:1px 7px;border-radius:999px;background:${c}22;color:${c};border:1px solid ${c}66">${src}</span>`;
+  };
+  async function reload() {
+    let d;
+    try { d = await fetchJSON('/api/settings/switches'); }
+    catch (e) { list.innerHTML = `<span class="set-msg err">${esc(cleanErr(e))}</span>`; return; }
+    const groups = {};
+    (d.switches || []).forEach(s => { (groups[s.category] = groups[s.category] || []).push(s); });
+    list.innerHTML = Object.keys(groups).map(cat => `
+      <div style="margin-top:14px"><div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:6px">${esc(cat)}</div>
+      ${groups[cat].map(s => {
+        const boolOn = /^(1|on|true|yes)$/i.test(s.value);
+        const ctrl = s.type === 'bool'
+          ? `<input type="checkbox" class="sw-in" data-key="${escAttr(s.key)}" data-type="bool" data-orig="${boolOn ? '1' : '0'}" ${boolOn ? 'checked' : ''}>`
+          : `<input type="text" class="sw-in" data-key="${escAttr(s.key)}" data-type="${escAttr(s.type)}" data-orig="${escAttr(s.value)}" value="${escAttr(s.value)}" style="width:120px">`;
+        return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--border,#ffffff14)">
+          <div style="flex:1">
+            <div style="font-size:0.86rem">${esc(s.label)} ${badge(s.source)}</div>
+            <div style="font-size:0.72rem;color:var(--text-muted)">${esc(s.desc)} <code style="opacity:.6">${esc(s.key)}</code></div>
+          </div>${ctrl}</div>`;
+      }).join('')}</div>`).join('')
+      + `<div style="margin-top:16px;display:flex;gap:10px;align-items:center">
+          <button class="set-btn-primary" id="swSave">Simpan</button>
+          <span id="swMsg" class="set-msg"></span>
+          <span style="flex:1"></span>
+          <code style="font-size:0.66rem;color:var(--text-muted)">${esc(d.path || '')}</code>
+        </div>`;
+    panel.querySelector('#swSave').addEventListener('click', async () => {
+      const msg = panel.querySelector('#swMsg');
+      const values = {};
+      list.querySelectorAll('.sw-in').forEach(el => {
+        const cur = el.dataset.type === 'bool' ? (el.checked ? '1' : '0') : el.value.trim();
+        if (cur !== (el.dataset.orig || '')) values[el.dataset.key] = cur; // cuma yg BERUBAH → gui-pin
+      });
+      if (!Object.keys(values).length) { msg.className = 'set-msg'; msg.textContent = 'Ga ada perubahan'; return; }
+      msg.className = 'set-msg'; msg.textContent = 'Menyimpan…';
+      try {
+        await fetchJSON('/api/settings/switches', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ values }),
+        });
+        msg.className = 'set-msg ok'; msg.textContent = '✓ tersimpan (live ≤3 dtk ke router)';
+        await reload();
+      } catch (e) { msg.className = 'set-msg err'; msg.textContent = cleanErr(e); }
+    });
+  }
   await reload();
 }
 
