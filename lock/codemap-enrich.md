@@ -39,3 +39,9 @@ selesai. Tabel `codemap_semantic` = extension additive (aman dari AI lain: gak s
 - M3: ingest enrich → brain drawers (`brain_search` bisa jawab "fitur X di file mana").
 - M4: AUTO-trigger enrich saat kode berubah (hook self-evolve = butuh sesi owner-attended; +
   safety-net terjadwal). Pakai agent codemap-enricher sbg pekerja.
+
+## UPDATE 2026-06-26 — M4 AUTO-ENRICH SELESAI (jalur aman)
+`feature_autosync.go` loop `codemapAutoEnrichLoop` tiap interval panggil `CodemapEnrichHandler`
+LANGSUNG (bypass middleware auth = trigger sistem). Hash-skip (M1) → MURAH pas kode stabil (0 LLM);
+file BARU/BERUBAH di-enrich ulang. Switch GUI: `FLOWORK_CODEMAP_AUTOENRICH` (default ON) + `_MIN` (30).
+Hook self-evolve write-path (root) tetap parked (core sensitif); scheduled-trigger ini nutup goalnya.

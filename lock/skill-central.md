@@ -28,3 +28,10 @@ biar gak ngerusak inti. Versi tombol ini = 80% value, ~0% risiko (cuma GUI + end
 ## FILE
 - `agent/web/tabs/agents.js` — tombol #cf-skills-sync-router + handler (non-frozen GUI).
 - Proxy dipakai (frozen, gak diubah): `agent/internal/agentmgr/router_skills.go` GET.
+
+## UPDATE 2026-06-26 — AUTO-SYNC (reference-model praktis SELESAI)
+`feature_autosync.go` (NON-frozen, seam RegisterFeature): loop `skillResyncLoop` tiap interval
+re-pull skill ter-link dari Router → update agent OTOMATIS (gak cuma tombol manual). Edit skill di
+router → NYEBAR ke agent. Switch GUI: `FLOWORK_SKILL_AUTOSYNC` (default ON) + `_MIN` (default 30).
+Reference-model PURE (zero-copy resolve live di kernelhost frozen) tetap parked (sakral); auto-sync
+ini nutup goal praktisnya.
