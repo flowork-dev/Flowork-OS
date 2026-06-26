@@ -32,20 +32,28 @@ import (
 // karena agent module (flowork-gui) ga boleh import internal package router (cross-module).
 const localDigestModel = "flowork-brain"
 
-// buildDigestDepsModel — DigestDeps yang LLM-nya dipaksa ke `model`. model KOSONG → pakai model
-// LOKAL (flowork-brain) — bukan cloud — biar compact tetep jalan tanpa langganan (owner). Bypass
-// DigestLLMOverride sepenuhnya (compact selalu deterministik: lokal atau model pilihan owner).
-// Embed tetep lewat router (bge-m3) — embedding ringan, lokal/cloud sama aja.
+// buildDigestDepsModel — DigestDeps buat reasoning extraction compact.
+// Owner 2026-06-26: compact pakai AGENT DEDIKASI (dream-digester, model GUI per-agent) by-default —
+// konsisten sama enrich (codemap-enricher) + hasil nyambung GRAPH. Urutan:
+//   1. compact_model KOSONG + DigestLLMOverride ke-set → lewat AGENT dream-digester (model GUI, mis.
+//      haiku → CEPAT, gak local-26B lambat). Inilah default baru.
+//   2. compact_model di-SET owner → direct ke model itu (override eksplisit).
+//   3. override nil (dream-digester ga ada) → fallback LOKAL (flowork-brain) — tetep jalan offline.
+// Embed tetep lewat router (bge-m3).
 func buildDigestDepsModel(scope string, tier int, model string) agentdb.DigestDeps {
 	model = strings.TrimSpace(model)
+	useAgent := model == "" && DigestLLMOverride != nil // default → agent dedikasi dream-digester
 	if model == "" {
-		model = localDigestModel // default LOKAL (owner 2026-06-22)
+		model = localDigestModel // fallback LOKAL kalau override nil
 	}
 	rc := cgmRouterClient()
 	return agentdb.DigestDeps{
 		AgentScope: scope,
 		Tier:       tier,
 		LLM: func(ctx context.Context, prompt string) (string, error) {
+			if useAgent {
+				return DigestLLMOverride(ctx, prompt) // dream-digester (model GUI) → graph
+			}
 			c, cancel := context.WithTimeout(ctx, 5*time.Minute)
 			defer cancel()
 			return rc.ChatComplete(c, model, prompt, cgmDigestMaxTokens)
