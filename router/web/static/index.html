@@ -2966,6 +2966,8 @@ done &lt; my_knowledge.jsonl</pre>
     let transform = { x: 0, y: 0, zoom: 1 };
     let hoverNode = null;
     let animationId = null;
+    let graphFrame = 0;       // counter frame buat auto-fit
+    let graphAutoFitAt = 0;   // fit-to-view pas frame ini (di-set tiap load)
 
     function startGraphSimulation() {
       canvas = document.getElementById('graphCanvas');
@@ -3104,16 +3106,28 @@ done &lt; my_knowledge.jsonl</pre>
       const tick = () => {
         updatePhysics();
         drawGraph();
+        graphFrame++;
+        if (graphAutoFitAt && graphFrame >= graphAutoFitAt) { graphAutoFitAt = 0; resetGraphView(); }
         animationId = requestAnimationFrame(tick);
       };
       tick();
     }
 
+    // resetGraphView — FIT-TO-BOUNDS (contek codemap fitGraph): zoom auto biar SEMUA node masuk
+    // layar (anti "cuma hub keliatan" pas node banyak ke-fling). Fallback ke center kalau kosong.
     function resetGraphView() {
       if (!canvas) return;
-      transform.x = canvas.width / 2;
-      transform.y = canvas.height / 2;
-      transform.zoom = 1.0;
+      const xs = graphNodes.map(n => n.x).filter(v => isFinite(v));
+      const ys = graphNodes.map(n => n.y).filter(v => isFinite(v));
+      if (!xs.length) { transform.x = canvas.width / 2; transform.y = canvas.height / 2; transform.zoom = 1.0; return; }
+      const minX = Math.min(...xs), maxX = Math.max(...xs);
+      const minY = Math.min(...ys), maxY = Math.max(...ys);
+      const W = canvas.width, H = canvas.height, pad = 70;
+      let z = Math.min(0.9, (W - pad * 2) / (maxX - minX + 1), (H - pad * 2) / (maxY - minY + 1));
+      z = Math.max(0.15, Math.min(z, 2));
+      transform.zoom = z;
+      transform.x = W / 2 - z * (minX + maxX) / 2;
+      transform.y = H / 2 - z * (minY + maxY) / 2;
     }
 
     function updatePhysics() {
@@ -3179,6 +3193,11 @@ done &lt; my_knowledge.jsonl</pre>
 
         node.vx += (0 - node.x) * gravity;
         node.vy += (0 - node.y) * gravity;
+
+        // clamp kecepatan (anti meledak pas node banyak saling-tolak → ke-fling ke luar layar)
+        const MAXV = 30;
+        if (node.vx > MAXV) node.vx = MAXV; else if (node.vx < -MAXV) node.vx = -MAXV;
+        if (node.vy > MAXV) node.vy = MAXV; else if (node.vy < -MAXV) node.vy = -MAXV;
 
         node.x += node.vx;
         node.y += node.vy;
@@ -3308,15 +3327,19 @@ done &lt; my_knowledge.jsonl</pre>
         ctx.textBaseline = 'middle';
         ctx.fillText(typeIcon, 0, 0);
 
-        // Label below — DIBATASI biar gak numpuk/smear (full label tetap di panel detail).
-        // Hover = boleh lebih panjang (40) biar kebaca; normal = 20 char.
-        ctx.fillStyle = isHovered ? '#ffffff' : '#cbd5e1';
-        ctx.font = isHovered ? 'bold 10px Arial' : '9px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        const _lbl = String(node.label || '');
-        const _max = isHovered ? 40 : 20;
-        ctx.fillText(_lbl.length > _max ? _lbl.slice(0, _max) + '…' : _lbl, 0, node.r + 4);
+        // Label — anti-smear: kalau graph PADAT (>40 node), label cuma muncul pas HOVER atau
+        // node HUB (r besar) → gak numpuk. Graph kecil = semua label (kebaca). Full label di panel.
+        const _dense = graphNodes.length > 40;
+        const _showLabel = isHovered || !_dense || node.r >= 16;
+        if (_showLabel) {
+          ctx.fillStyle = isHovered ? '#ffffff' : '#cbd5e1';
+          ctx.font = isHovered ? 'bold 11px Arial' : '9px Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          const _lbl = String(node.label || '');
+          const _max = isHovered ? 40 : 18;
+          ctx.fillText(_lbl.length > _max ? _lbl.slice(0, _max) + '…' : _lbl, 0, node.r + 4);
+        }
 
         ctx.restore();
       }
@@ -3414,6 +3437,7 @@ done &lt; my_knowledge.jsonl</pre>
 
             graphNodes = newNodes;
             graphEdges = newEdges;
+            graphAutoFitAt = graphFrame + 110; // auto fit-to-view setelah physics settle (~2dtk)
 
             if (!canvas) {
               startGraphSimulation();
