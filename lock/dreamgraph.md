@@ -30,13 +30,19 @@ Di `agent/internal/fwswitch/registry.go` (kategori "Brain / Graph"), muncul di t
 - `FLOWORK_DREAMGRAPH_SYNC_MIN` (int, default `5`) — interval menit.
 Lintas-proses via `~/.flowork/flowork_settings.json` → router baca live (≤3 dtk).
 
+## CAKUPAN SUMBER (file `graph_extras.go` — SyncGraphExtended)
+DreamGraph mirror dari: **constitution + persona + skill + agent** (core, `syncCoreEntitiesToGraph`)
+\+ **INSTINCTS** (drawers room `instinct_*` → node type `instinct`) + **KNOWLEDGE** (hub per-WING,
+BUKAN node-per-drawer biar 860k gak meledak). Semua spoke → hub `flowork` (anti orphan). Idempotent
+(cleanup by-source dulu), MIRROR-only (gak hapus sumber/memory).
+
 ## VERIFIKASI (2026-06-26)
 - Boot log: `dreamgraph: boot sync OK`.
-- `cognitive_graph_stats` 0/0 → **16 node / 15 edge** (13 constitution + flowork + agent_mr.flow +
-  1 persona; semua edge `governs`/`member_of`/`persona_of` → `flowork`). Angka kecil = CERMIN sumber
-  saat ini (snapshot lama 44/57 itu STALE, bukan target).
-- `POST /api/brain/graph/sync` → `{"edges":15,"nodes":16,"ok":true}`.
-- Build+vet router PASS. Idempotent (sync ulang stabil).
+- `cognitive_graph_stats` 0/0 → **325 node / 324 edge**: 285 instinct + 24 knowledge-wing + 14
+  constitution + 2 (agent+persona). Semua nyambung ke `flowork` (no orphan by-design).
+- Switch GUI (4): `FLOWORK_DREAMGRAPH_AUTOSYNC/_SYNC_MIN/_INSTINCTS/_KNOWLEDGE` — kebukti muncul di
+  tab "🎛️ Switch Fitur".
+- `POST /api/brain/graph/sync` works. Build+vet+TestKernelFreeze PASS. Idempotent.
 
 ## KEPUTUSAN FREEZE
 File-file ini = **orchestration/extension seam + switch-protected**, SENGAJA non-frozen:
@@ -47,7 +53,5 @@ File-file ini = **orchestration/extension seam + switch-protected**, SENGAJA non
 Alasan: prinsip "freeze CORE, biarin seam" → switch sudah cukup lindungi dari AI lain ngerusak.
 
 ## SISA (belum, sengaja ditunda — lihat opus_roadmap.md)
-- Projeksi KNOWLEDGE corpus (860k drawer) sbg hub-per-wing → graph "pengetahuan baru" lebih literal.
-- Projeksi INSTINCTS (365 drawer) sbg node.
 - MEMORY via dream-cycle rebuild (real extractor + safe digest) = HIGH-RISK data-loss → butuh sesi
-  owner-attended (alasan: blast-radius memori permanen).
+  owner-attended (alasan: blast-radius memori permanen). Instincts ✅ + Knowledge-hub ✅ DONE.

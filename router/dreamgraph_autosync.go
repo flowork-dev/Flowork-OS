@@ -60,7 +60,7 @@ func dreamGraphSyncOnce(ctx context.Context) error {
 	if !brain.Available() {
 		return nil
 	}
-	return brain.SyncGraphToRAG(ctx)
+	return brain.SyncGraphExtended(ctx) // B+C: core+instincts+knowledge (switch GUI)
 }
 
 // startDreamGraphAutoSync — boot-populate sekali + loop poll (re-baca switch GUI tiap siklus =
