@@ -25,6 +25,8 @@ var Registry = []Switch{
 	{"FLOWORK_INSTINCT_INJECT", "Injeksi insting", "Suntik insting relevan ke tiap request. OFF = matiin total.", "bool", "true", "Brain / Instinct"},
 	{"FLOWORK_BRAIN_EXTERNAL_SCOPE", "Anti-halu agent luar", "Caller eksternal (brain-as-service) ga dikasih insting-tool Flowork → ga halu manggil tool yg ga ada.", "bool", "false", "Brain / Instinct"},
 	{"FLOWORK_SEARCH_MINSCORE", "Lantai relevansi search", "Skor cosine minimum hasil brain-search (0.45 default). 0 = matiin lantai (semua lolos).", "float", "0.45", "Brain / Search"},
+	{"FLOWORK_BINARY_VECTOR", "Binary-vector recall (#5)", "Search korpus JUTAAN: coarse biner (popcount) + rerank int8. auto (default) = aktif otomatis >=1jt drawer; on=paksa; off=int8 biasa. Recall 1.0 (rerank exact).", "string", "auto", "Brain / Search"},
+	{"FLOWORK_BINARY_VECTOR_MIN", "Binary auto threshold", "Jumlah drawer minimum biar binary-vector auto-aktif (default 1000000 = 1 juta).", "int", "1000000", "Brain / Search"},
 	{"FLOWORK_TOOLCALL_RECOVER", "Pulihin <tool_call> bocor", "Parse teks <tool_call> yg bocor dari model lokal jadi tool-call asli (anti-bocor ke user).", "bool", "true", "Router / Tools"},
 	{"FLOWORK_DEFER_TOOLS", "Defer skema tool (#2C)", "Kirim skema tool on-demand (tool_lookup) → hemat prompt. Per-agent override di panel Agent Brain.", "bool", "false", "Router / Tools"},
 	{"FLOWORK_DYNAMIC_TOOLS", "Intent-gated tools (#9)", "Router prune tool-schema ke yg RELEVAN (semantic cosine) → potong biang token #1 (~55% prompt). Escape-hatch (tool_search/tool_lookup) selalu lolos → aman.", "bool", "false", "Router / Tools"},

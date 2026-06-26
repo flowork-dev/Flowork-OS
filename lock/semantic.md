@@ -136,9 +136,17 @@ knowledge apapun → otomatis ke-recall by-makna dalam ≤2 menit, TANPA rebuild
 
 ---
 
-## 8. ROADMAP (lever SKALA — pas korpus balik jutaan)
+## 8. BINARY VECTOR RECALL (#5) — ✅ SELESAI 2026-06-26 (lever SKALA, auto >=1jt)
 
-**Binary vector recall** (BitNet-style): turunin embedding 8-bit → **1-bit/dim** → similarity jadi
-XNOR+popcount (no perkalian). 2-tahap: COARSE biner (jutaan node super cepat) → RERANK 8-bit (akurasi
-balik). Worth pas korpus GEDE (RAM + dot-float jadi bottleneck); brain kecil sekarang belum kerasa.
-Cuma di bagian VECTOR (FTS/graph ga kena). Di `vecindex/ann.go`.
+**Binary-vector** (sign-LSH): sign-bit tiap dim (int8>0→1) → query XNOR vektor → **popcount** =
+agreement (≈cosine). 2-tahap: (1) COARSE biner ambil top-M kandidat (cepet, 128 byte/vektor); (2)
+RERANK int8 exact (`SearchSubset`) di M kandidat → top-k final akurat. **Recall@10 = 1.00** (test
+`TestBinaryVectorRecall`, rerank exact).
+
+- File: `vecindex/binary_ext.go` (NON-frozen) + route 1-baris di `vecindex.go Search`.
+- **AUTO-DETECT** (owner): `FLOWORK_BINARY_VECTOR=auto` (default) → AKTIF cuma kalau drawer **>= 1 juta**
+  (`FLOWORK_BINARY_VECTOR_MIN`). Di bawah itu = int8 full-scan biasa → **ZERO perubahan** (sekarang 860k
+  → dormant). `on`=paksa, `off`=mati. GUI Switch Fitur "Brain / Search".
+- Sig di-cache per-Index (lazy, ~128MB @ 1jt). Cuma jalur VECTOR (FTS/graph/konstitusi ga kena —
+  **konstitusi default tetep selalu nempel**, verified inject 13 rules post-change).
+- Belum di-freeze: teruji recall tapi BELUM proven di skala 1jt nyata → freeze pas udah jalan di 1jt.

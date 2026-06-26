@@ -129,6 +129,11 @@ func (ix *Index) Search(query []float32, k int) []Hit {
 	if k > ix.Len() {
 		k = ix.Len()
 	}
+	// #5 binary-vector: korpus JUTAAN → coarse-biner + rerank-int8 (auto >=1jt, lihat binary_ext.go).
+	// Default OFF (auto: <1jt = int8 full-scan biasa di bawah ini → ZERO perubahan skala sekarang).
+	if ix.useBinary() {
+		return ix.searchBinary(query, k)
+	}
 	q := make([]int8, ix.dim)
 	quantizeInto(query, ix.scale, q)
 
