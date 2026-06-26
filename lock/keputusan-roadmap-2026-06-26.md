@@ -35,12 +35,11 @@ nyaring read-path (gejala langsung ke-mitigasi).
 4. unfreeze→edit→re-hash→KERNEL_FREEZE→re-freeze ke-3 file. Verify Rule-9 bahasa-manusia + digest test.
 Detail tambahan: `lock/ERROR_EDUKASI.md §5`.
 
-### #5 #2B re-digest insting Mr.Flow — TUNDA (Rule 8, butuh kurasi owner)
-**Kenapa:** nge-digest 750 pesan chat jadi INSTING = NAMBAH ISI BRAIN (Rule 8: ubah brain/doktrin/
-persona butuh ACC owner). KRITIS: constraint keamanan (kill-switch / AI-pindah-server) JANGAN jadi
-insting umum — butuh JUDGMENT owner mana pola yg jadi insting, mana yg literal/skip. Auto-digest
-unattended bisa polusi brain dgn insting jelek = susah dibalik. Mekanisme (`/api/brain/ingest/submit`)
-udah ADA → owner tinggal kurasi manual via GUI (Brain → Instincts) atau sesi bareng.
+### #5 #2B re-digest — ✅ SELESAI 2026-06-26 (owner RALAT framing gw → dikerjain BENER)
+Gw sempat salah: framing insting=WHEN→THEN doang → bilang chat noise. **Owner ralat: "chat itu
+insting — proses, sejarah, cara bertahan hidup."** Itu LIVED-MEMORY buat cognitive-graph. AKSI:
+import 738 interaksi unik backup → digest ke cognitive-graph (node 354→419+, jalan terus background)
++ 1 insting gaya-bahasa (ACC owner). DB privat (gitignored), reversible. Detail: `lock/redigest-history.md`.
 
 ### #6 Rebuild ~24 agent template-lama → agentkit — TUNDA (no-source)
 **Kenapa:** ~24 agent itu DEPLOY-ONLY di `~/.flowork` (ga ada source di repo). Ga bisa rebuild tanpa
