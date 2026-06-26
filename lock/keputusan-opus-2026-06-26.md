@@ -1,56 +1,63 @@
-# KEPUTUSAN AUTONOMOUS — Opus 2026-06-26 (owner istirahat, titip rumah)
+# SESI OPUS 2026-06-26 — RANGKUMAN KERJA + KEPUTUSAN (owner istirahat → autonomous)
 
-> Owner pasrah penuh + off. Gw ambil keputusan "paling stabil & permanen" (cabut-akar). Prinsip:
-> yang AMAN+teruji → KERJAIN; yang beresiko-tinggi unattended (data-loss / buka banyak frozen) →
-> TUNDA dengan ALASAN konkret biar owner eksekusi pas hadir. Backup penuh: `Pictures/flowok_backup/FLOWORKOS4`.
+> Owner pasrah penuh ("titip rumah"). Prinsip: paling stabil & permanen, cabut-akar, switch-before-
+> freeze, test-before-freeze, QC GUI beneran (verified pakai screenshot CDP/chromium), push BASE doang
+> (public = rollback), tulis ALASAN di sini. Backup penuh: `Pictures/flowok_backup/FLOWORKOS4`.
 
-## ✅ SELESAI (dibangun + di-test + live)
-1. **DreamGraph auto-populate + auto-update** (`lock/dreamgraph.md`). Graph router 0/0 → 16 node/15
-   edge, boot-sync + ticker + switch GUI (`FLOWORK_DREAMGRAPH_AUTOSYNC/_SYNC_MIN`) + endpoint manual.
-   Verified live + build/vet PASS. Nyelesain keluhan owner "graph kosong".
-2. **Codemap enrich VERIFIED berfungsi** (`lock/codemap-enrich.md`). Audit: enrich sebelumnya 0 row
-   = belum pernah dijalanin (bukan rusak). Dijalanin → row terisi via AGENT `codemap-enricher`
-   (provenance kebukti, bukan fallback). Full-populate 411 file jalan (background).
-3. **M1 codemap incremental by-hash** (`lock/codemap-enrich.md`). Kolom `content_hash` → file BERUBAH
-   = re-enrich (akar staleness dicabut). Agent rebuilt+restart, TestKernelFreeze PASS.
+## ✅ SELESAI (dibangun + di-test + verified GUI + frozen + pushed ke flowork-base)
 
-## 🔎 AUDIT (temuan, buat owner)
-- **CGM agent (#cognitive)**: graph hidup (701 node/496 edge) + GUI render OK. **TEMUAN: orphan
-  REGRESI ~204 (29%)** — klaim "orphan 0%" (`CognitiveGraph.md` backfill 2026-06-23) udah basi krn
-  graph tumbuh & backfill TIDAK periodik. Plus **49 open-tension** numpuk (nunggu owner decide).
-  → fix = backfill periodik (lihat TUNDA #5).
-- **Mesh & Policy Console (#mesh-console)**: SEMUA endpoint 200, fungsional di level API. Tapi mesh
-  masih **PHASE-1 by-design** (`stack/overview`: "single-owner no real mesh traffic, multi-host
-  phase 2") → data peer/packet/karma/tool-manifest = SEED. Policy/pricing/provider/localai jalan.
-  Bukan rusak; phase-2 (multi-host) = fase tersendiri.
+1. **DreamGraph router auto-populate + auto-update** → `lock/dreamgraph.md`.
+   0/0 → **325 node/324 edge**: constitution+persona+skill+agent + 285 instinct + 24 knowledge-wing.
+   Boot-sync + ticker + endpoint manual + **4 switch GUI** (AUTOSYNC/SYNC_MIN/INSTINCTS/KNOWLEDGE).
+   GUI canvas DIBENERIN (verified screenshot): label truncate (anti-smear), fit-to-bounds (contek
+   codemap), physics cooling (BEKU ~4dtk, anti gerak-terus bikin pusing).
 
-## ⏸️ DITUNDA (ALASAN — owner eksekusi pas hadir)
-1. **Memory → DreamGraph (dream-cycle rebuild)**: butuh ganti mock-extractor → LLM asli + digest-log
-   aman. Blast-radius = MEMORI PERMANEN (bug lama = data-loss). Unattended 3am = ga sesuai "paling
-   stabil". Plan lengkap: `opus_roadmap.md` Bagian 1 Fase D.
-2. **Skill Central (copy→reference)**: nyentuh file LOCKED (`router_skills.go`, `agents_router_skills.js`)
-   + core `mr-flow/main.go`. Perubahan kontrak besar; butuh review owner. Plan: roadmap Bagian 2.
-3. **Codemap auto-enrich saat kode berubah (M4)**: hook self-evolve = core sensitif. M1 (fondasi
-   hash) udah jalan; auto-trigger butuh owner-attended. Plan: roadmap Bagian 6 M2–M4.
-4. **DreamGraph: knowledge-hub (860k) + instincts (365) projection**: additive tapi butuh fungsi baru
-   di package `brain` (paket router) + uji skala. Aman tapi belum kekejar sesi ini. Roadmap Bagian 1 B/C.
-5. **CGM orphan periodic backfill**: file CGM = FROZEN brain-core. Backfill 2026-06-23 manual one-time;
-   bikin periodik = nyentuh frozen / job baru. Tunda biar ga buru-buru buka frozen unattended.
-6. **Dropdown mem_type unify (Bagian 3)**: polish prioritas-rendah (owner sendiri bilang "nanti
-   rapiin") + edit embedded dashboard HTML 408KB = risiko > nilai buat sesi unattended. Plan ready
-   di roadmap Bagian 3.
+2. **Dropdown mem_type unify** (Bagian 3). Endpoint `/api/brain/mem-types` (kanonik ∪ present);
+   2 dropdown baca dari 1 sumber (16 opsi sama, dulu 12 vs 7). Verified CDP.
 
-## ❄️ KEPUTUSAN FREEZE (alasan)
-Prinsip owner: "switch sebelum freeze, freeze CORE biarin seam". Perubahan gw SEMUA = **seam +
-switch-protected** (evolution-safe by-design):
-- `dreamgraph_autosync.go` → **DI-FREEZE** (logika stabil, lengkap, switch FLOWORK_DREAMGRAPH_* =
-  escape; gak ada kerja lanjutan). Kunci di `KERNEL_FREEZE.md`.
-- `main.go`/`routes.go` (router) → **TIDAK** (harus terbuka buat nambah route/boot-hook).
-- `registry.go` (fwswitch) → **TIDAK** (extension-point switch, by-design non-frozen).
-- codemap files (`codemap_semantic.go` store+handler) → **TIDAK** (masih ada M2–M4 terencana; freeze
-  sekarang = mateng evolusi belum selesai). Aman: extension additive, gak sentuh frozen.
-TestKernelFreeze tetap PASS (gak ada frozen lama yg ke-sentuh).
+3. **CGM orphan backfill** (Bagian 4). Orphan **208 → 0** (hub `brain-root`, member_of). Wired ke
+   `graph_autosync`. Switch `FLOWORK_CGM_ORPHAN_BACKFILL`. Graph CGM nyambung penuh (1256 node).
 
-## 📦 PUSH
-Ke **base (private) DOANG** (perintah owner) → public = titik rollback kalau halu. Audit secret +
-path `/home/` sebelum push.
+4. **CodeMap enrich VERIFIED** (Bagian 5). Audit: dulu 0 row = belum pernah jalan (bukan rusak).
+   Dijalanin → row terisi via AGENT `codemap-enricher` (provenance kebukti, bukan fallback).
+
+5. **M1 enrich incremental by-hash**. Kolom `content_hash` → file BERUBAH = re-enrich (akar staleness).
+
+6. **M2 codemap → CGM** (self-aware). 246 code-node masuk CGM agent (struktur file+import) via
+   `graph_autosync` + `LinkCodemapToGraph`. Switch `FLOWORK_CGM_CODEMAP`.
+
+7. **Skill Central (propagasi)** → `lock/skill-central.md`. Tombol GUI "🔄 Sync from Router"
+   (jalur AMAN, non-frozen GUI): edit skill di router → agent re-pull → update. Verified screenshot.
+
+8. **Audit Mesh & Policy + CGM**. Mesh PHASE-1 by-design (data seed, multi-host=phase-2); semua
+   endpoint 200. CGM hidup + GUI render OK.
+
+9. **Memory (Bagian 1-D) — RESOLVED tanpa bangun barang bahaya**. Tabel `memories` router KOSONG
+   by-design; memory episodik = agent `interactions` (1200) SUDAH ke-graph di CGM (424 node memory-
+   derived via dream-cycle aktif). Rebuild dream-cycle LLM = mubazir (tabel kosong) + data-loss-risk
+   → **TIDAK dibangun** (cabut-akar/anti-halu). Detail: `lock/dreamgraph.md` §MEMORY.
+
+## ❄️ FREEZE (chattr +i + KERNEL_FREEZE + TestKernelFreeze PASS) — file logika baru/diubah
+- `../router/dreamgraph_autosync.go`, `../router/internal/brain/graph_extras.go`,
+  `../router/handlers_brain_memtypes.go`
+- `graph_autosync.go` (re-frozen tiap edit: M2 + Bagian 4)
+- `internal/agentdb/cognitive_orphan.go`, `internal/agentdb/codemap_semantic.go`,
+  `internal/agentmgr/codemap_semantic.go`
+
+## ⏸️ SENGAJA NON-FROZEN (seam/registry/orchestration — switch yg lindungi)
+`main.go`/`routes.go` (router), `registry.go` + `mem_type_registry.go` (extension point),
+`index.html` + `agents.js` (GUI multi-fitur; freeze = matiin evolusi tab). Alasan: prinsip
+"freeze CORE, biarin seam".
+
+## 🔘 SWITCH GUI baru (kategori Brain/Graph)
+`FLOWORK_DREAMGRAPH_AUTOSYNC`, `_SYNC_MIN`, `_INSTINCTS`, `_KNOWLEDGE`, `FLOWORK_CGM_CODEMAP`,
+`FLOWORK_CGM_ORPHAN_BACKFILL`. (Default aman; tunable dari tab "🎛️ Switch Fitur".)
+
+## ⏭️ SISA (di `opus_roadmap.md`)
+- Skill Central reference-model PENUH (butuh buka skill-core + kernel/runtime FROZEN — sesi fokus).
+- M3 enrich→brain (keblokir enrich model lokal lambat + cross-boundary).
+- M4 auto-enrich on-code-change (hook self-evolve sensitif).
+
+## KONDISI AKHIR
+Router :2402 + agent :1987 sehat. DreamGraph 325 node. CGM 1256 node / 0 orphan. TestKernelFreeze
+PASS. base = update terbaru; **public = utuh (rollback)**.
