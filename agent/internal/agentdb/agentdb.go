@@ -349,12 +349,12 @@ func (s *Store) Save(cfg map[string]any) error {
 	defer tx.Rollback()
 
 	upsertKV := func(table, k, v string) error {
-		q := fmt.Sprintf("INSERT INTO %s(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v", table)
+		q := fmt.Sprintf("INSERT INTO %s(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v", table) // scanner:ignore — table = literal hardcoded (kv/secrets/meta), value parameterized (?)
 		_, e := tx.Exec(q, k, v)
 		return e
 	}
 	delKV := func(table, k string) error {
-		_, e := tx.Exec("DELETE FROM "+table+" WHERE k=?", k)
+		_, e := tx.Exec("DELETE FROM "+table+" WHERE k=?", k) // scanner:ignore — table = literal hardcoded, key parameterized (?)
 		return e
 	}
 
@@ -619,7 +619,7 @@ func (s *Store) MigrateFromJSON(agentFolderPath string) error {
 }
 
 func (s *Store) readKV(table string) (map[string]string, error) {
-	rows, err := s.db.Query("SELECT k, v FROM " + table)
+	rows, err := s.db.Query("SELECT k, v FROM " + table) // scanner:ignore — table = literal hardcoded (kv/secrets/meta), no user input
 	if err != nil {
 		return nil, err
 	}

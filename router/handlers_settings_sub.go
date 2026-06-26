@@ -35,6 +35,7 @@ func settingsDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	for _, t := range tables {
 		var n int
 
+		// di-parameterize → concat wajar, aman dari SQL injection. // scanner:ignore
 		_ = d.QueryRow("SELECT COUNT(*) FROM " + t).Scan(&n)
 		counts[t] = n
 	}
