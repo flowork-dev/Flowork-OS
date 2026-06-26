@@ -63,6 +63,12 @@ HTML** (`<b>`/`<i>`/`<code>`/`<pre>`/`<a>`), sendMessage kirim dgn `parse_mode=H
 di-"parkir" dulu biar isinya literal. **FALLBACK:** kalau HTML ditolak Telegram (400) → kirim ulang
 POLOS (`stripMarkdown`) — pesan ga pernah ilang. Switch `FLOWORK_TG_FORMAT`: `html` (default) | `plain`/`off`.
 
+**CHUNKING (2026-06-26):** pesan PANJANG dulu kepotong limit Telegram (4096). `splitForTelegram()`
+(telegram_media.go, non-frozen) potong jadi chunk ≤3500 rune di batas BAGUS (paragraf > baris > spasi,
+ga motong tengah kata); `sendMessage` (main.go) rekursi kirim tiap chunk. Switch `FLOWORK_TG_CHUNK=0`
+= matiin (1 pesan). Verified: 8930c → 3 chunk bersih; pendek → 1. **INPUT** >4096 = limit Telegram
+client-side (ga bisa di-fix server) → workaround: kirim teks panjang sbg **file .txt** (mr-flow baca via enrichMedia).
+
 ---
 
 ## 4. SWITCH (env, NON-frozen — jalan evolusi)
@@ -143,6 +149,9 @@ cukup set ENV `FLOWORK_ORCHESTRATOR`, NOL buka freeze (Rule 7).**
 
 **Telegram poll 409.** gui log: `getUpdates 409 conflict — instance lain ngambil-alih poll`. Cuma 1 flowork-gui
 lokal → poller LAIN (mesin/sesi lain, bot token sama) rebut long-poll → inbound Telegram bisa ke-grab di tempat lain. Cek: matiin instance/token ganda.
+> STATUS 2026-06-26: **GA aktif** (ga ada "Conflict/409" di log terkini, poller tunggal). ENVIRONMENTAL —
+> kalau muncul lagi = ada instance/mesin LAIN pakai bot token sama → owner matiin yg ganda / rotate token.
+> Akar di luar kode (ga bisa di-fix server-side; token kepake 2 tempat = Telegram kasih 1 poller doang).
 
 ---
 
