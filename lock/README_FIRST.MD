@@ -1,4 +1,0 @@
-C
-10, setiap loe habis selesaikan roadmap hapus dari list roadmap jangan di archive lalu abadikan atau jelaskan apa yang sudah loe selesaikan disini /home/mrflow/Documents/FLowork_os/lock jika ngak ada file yang sesuai LOE buat ya, jika loe merubah arsitektur yang sudah ada , MAKA pada  /home/mrflow/Documents/FLowork_os/lock  hapus bukan di archive, ganti arsitektur yang baru agar fresh, hystory ada di git jadi aman. FILE YANG ADA DI /home/mrflow/Documents/FLowork_os/lock  ITU HARUS CLEAN AGAR TIDAK NOISE, SEJARAH ADA DI REPO JANGAN KOTORIN DOKUMENTASI DISINI
-
- JIKA LOE LIHAT ADA YANG NGAK CLEAND DI /home/mrflow/Documents/FLowork_os/lock MAKA LOE BENERIN YA, INGAT HARUS CLEAN DAN PASTIKAN ARSITEKTUR SESUAI
