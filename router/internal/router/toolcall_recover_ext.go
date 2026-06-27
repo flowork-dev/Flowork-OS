@@ -24,40 +24,89 @@ func toolcallRecoverEnabled() bool {
 	return strings.TrimSpace(strings.ToLower(os.Getenv("FLOWORK_TOOLCALL_RECOVER"))) != "0"
 }
 
+// RecoveredToolCall — 1 tool-call yg dipulihin dari teks muntah (name + args JSON-string).
+type RecoveredToolCall struct {
+	Name string
+	Args string
+}
+
+// extraToolcallExtractors — SWITCH (POLA A, Rule #7). Extractor format-muntah TAMBAHAN
+// (```json fence, JSON telanjang, syntax func(...)) didaftar lewat sibling init() TANPA
+// buka freeze. Tiap extractor balik (calls, cleanedContent); kalau calls>0 → dipakai.
+// Default KOSONG = perilaku persis lama (cuma <tool_call> tag). Self-sufficient: hapus
+// sibling → registry kosong → aman.
+var extraToolcallExtractors []func(content string) (calls []RecoveredToolCall, cleaned string)
+
+// RegisterToolcallExtractor — daftarin extractor format-muntah baru (nil di-skip). Tiap
+// extractor WAJIB konservatif: cuma balik calls kalau yakin itu tool-call (anti false-positive
+// yg ngerusak balasan teks normal).
+func RegisterToolcallExtractor(fn func(content string) (calls []RecoveredToolCall, cleaned string)) {
+	if fn != nil {
+		extraToolcallExtractors = append(extraToolcallExtractors, fn)
+	}
+}
+
 func recoverTextToolCalls(resp *OpenAIResponse) {
 	if resp == nil || !toolcallRecoverEnabled() {
 		return
 	}
+	type fnObj struct {
+		Name      string `json:"name"`
+		Arguments string `json:"arguments"`
+	}
+	type tcall struct {
+		ID       string `json:"id"`
+		Type     string `json:"type"`
+		Function fnObj  `json:"function"`
+	}
+	mk := func(j int, name, args string) tcall {
+		return tcall{ID: "call_recover_" + strconv.Itoa(j), Type: "function", Function: fnObj{Name: name, Arguments: args}}
+	}
 	for i := range resp.Choices {
 		msg := &resp.Choices[i].Message
-		if hasNativeToolCalls(msg.ToolCalls) || !strings.Contains(msg.Content, "<tool_call>") {
+		if hasNativeToolCalls(msg.ToolCalls) {
 			continue
 		}
-		type fnObj struct {
-			Name      string `json:"name"`
-			Arguments string `json:"arguments"`
-		}
-		type tcall struct {
-			ID       string `json:"id"`
-			Type     string `json:"type"`
-			Function fnObj  `json:"function"`
-		}
 		var calls []tcall
-		for j, m := range toolCallTagRe.FindAllStringSubmatch(msg.Content, -1) {
-			name, args := parseToolCallInner(m[1])
-			if name == "" {
-				continue
+		via := ""
+		// 1) <tool_call> tag (PRIMER — paling banyak dipake model lokal). Perilaku lama.
+		if strings.Contains(msg.Content, "<tool_call>") {
+			for _, m := range toolCallTagRe.FindAllStringSubmatch(msg.Content, -1) {
+				name, args := parseToolCallInner(m[1])
+				if name != "" {
+					calls = append(calls, mk(len(calls), name, args))
+				}
 			}
-			calls = append(calls, tcall{ID: "call_recover_" + strconv.Itoa(j), Type: "function",
-				Function: fnObj{Name: name, Arguments: args}})
+			if len(calls) > 0 {
+				msg.Content = stripToolCallTags(msg.Content)
+				via = "<tool_call>"
+			}
 		}
-
-		msg.Content = stripToolCallTags(msg.Content)
+		// 2) Extractor TAMBAHAN (sibling) — cuma kalau tag ga ngasih hasil. Format lain
+		//    (```json fence, JSON telanjang, func-syntax). Konservatif per-extractor.
+		if len(calls) == 0 {
+			for _, ex := range extraToolcallExtractors {
+				rcs, cleaned := ex(msg.Content)
+				if len(rcs) == 0 {
+					continue
+				}
+				for _, rc := range rcs {
+					if strings.TrimSpace(rc.Name) != "" {
+						calls = append(calls, mk(len(calls), rc.Name, rc.Args))
+					}
+				}
+				if len(calls) > 0 {
+					msg.Content = strings.TrimSpace(cleaned)
+					via = "extractor"
+					break
+				}
+			}
+		}
 		if len(calls) > 0 {
 			if b, err := json.Marshal(calls); err == nil {
 				msg.ToolCalls = b
 				resp.Choices[i].FinishReason = "tool_calls"
-				log.Printf("flow_router toolcall-recover: %d <tool_call> teks → native tool_calls (anti-bocor)", len(calls))
+				log.Printf("flow_router toolcall-recover: %d %s teks → native tool_calls (anti-bocor)", len(calls), via)
 			}
 		}
 	}
