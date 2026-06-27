@@ -40,8 +40,10 @@ clone/copy repo → deteksi runtime → install dep KE FOLDER → tulis manifest
 
 ## Switch / evolusi (Rule #7)
 - **Runtime baru** (ruby/php/deno…) → sibling `init(){ adopt.RegisterDetector(...) }`, ga sentuh `detect.go` (beku).
+- **Pola scan baru** (ransomware/miner/dll) → sibling `init(){ adopt.RegisterScanRule(label,sev,regex) }`, ga sentuh `scan.go` (beku).
 - **Kontrak baru** (MCP dll) → adapter/binary BARU (cliadapter & httpadapter beku) — bukan edit yang ada.
 - Hapus `feature_app_adopt_ext.go` → fitur adopt mati mulus, core utuh (self-sufficient).
+- **Self-sufficient terbukti** (delete-test 2026-06-27): hapus adopt_ext/fsutil/feature → `go build ./...` exit 0.
 
 ## Keamanan
 - **Consent exec WAJIB** (`?approve_exec=1`) — clone+install = perintah OS, owner buka gerbang (bukan AI).

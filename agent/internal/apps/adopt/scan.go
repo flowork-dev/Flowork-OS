@@ -39,7 +39,9 @@ type rule struct {
 // dangerRules — pola high-signal buat kode untrusted. Sengaja ketat (false-positive lebih baik
 // daripada lolos). Owner tetap bisa approve sadar (consent).
 var dangerRules = []rule{
-	{"rm-rf-destruktif", "critical", regexp.MustCompile(`(?i)\brm\s+-[rf]*r[rf]*\s+(-[a-z]*\s+)*(/|~|\$HOME|\*)`)},
+	// rm -rf yg nyasar ke ROOT/HOME/wildcard-telanjang (bahaya). Sengaja TIDAK match subdir spesifik
+	// (mis. `rm -rf /var/lib/apt/lists/*` = cleanup apt standar Docker) biar ga false-positive.
+	{"rm-rf-destruktif", "critical", regexp.MustCompile(`(?i)\brm\s+-[a-z]*r[a-z]*\s+(--no-preserve-root\s+)?(/([\s*;&|]|$)|~([\s/]|$)|\$HOME|\*(\s|$))`)},
 	{"fork-bomb", "critical", regexp.MustCompile(`:\(\)\s*\{\s*:\s*\|\s*:`)},
 	{"mkfs/dd-disk", "critical", regexp.MustCompile(`(?i)\b(mkfs\b|dd\s+if=|>\s*/dev/sd[a-z])`)},
 	{"pipe-ke-shell", "critical", regexp.MustCompile(`(?i)\b(curl|wget)\b[^|\n]*\|\s*(sudo\s+)?(sh|bash|zsh)\b`)},
@@ -50,6 +52,23 @@ var dangerRules = []rule{
 	{"setuid/chmod-s", "warn", regexp.MustCompile(`(?i)\b(setuid|chmod\s+[ug]?\+?s)\b`)},
 	{"base64-decode-exec", "warn", regexp.MustCompile(`(?i)base64\s+(-d|--decode)\b[^|\n]*\|\s*(sh|bash)`)},
 	{"crontab-persistence", "warn", regexp.MustCompile(`(?i)\bcrontab\s+-`)},
+}
+
+// extraRules — SWITCH/seam (POLA A): pola scan BARU didaftarin lewat sibling _ext.go tanpa nyentuh
+// file ini (frozen). Default kosong = perilaku persis built-in. (Rule #7: nambah aturan ga buka freeze.)
+var extraRules []rule
+
+// RegisterScanRule — daftarin pola berbahaya BARU (mis. ransomware-marker, miner) via sibling.
+// severity selain "critical" → dianggap "warn". Pattern invalid / label kosong → di-skip (aman).
+func RegisterScanRule(label, severity, pattern string) {
+	re, err := regexp.Compile(pattern)
+	if err != nil || strings.TrimSpace(label) == "" {
+		return
+	}
+	if severity != "critical" {
+		severity = "warn"
+	}
+	extraRules = append(extraRules, rule{label, severity, re})
 }
 
 // skipDir — folder yang dilewati (dep/vcs, bukan kode repo asli).
@@ -119,16 +138,18 @@ func scanFile(path, rel string, rep *ScanReport) {
 	for sc.Scan() {
 		ln++
 		line := sc.Text()
-		for _, r := range dangerRules {
-			if r.re.MatchString(line) {
-				rep.Findings = append(rep.Findings, Finding{
-					File: rel, Line: ln, Severity: r.sev, Pattern: r.label,
-					Evidence: trimEvidence(line),
-				})
-				if r.sev == "critical" {
-					rep.Critical++
-				} else {
-					rep.Warn++
+		for _, rs := range [][]rule{dangerRules, extraRules} {
+			for _, r := range rs {
+				if r.re.MatchString(line) {
+					rep.Findings = append(rep.Findings, Finding{
+						File: rel, Line: ln, Severity: r.sev, Pattern: r.label,
+						Evidence: trimEvidence(line),
+					})
+					if r.sev == "critical" {
+						rep.Critical++
+					} else {
+						rep.Warn++
+					}
 				}
 			}
 		}

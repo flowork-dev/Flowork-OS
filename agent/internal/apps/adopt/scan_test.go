@@ -41,6 +41,38 @@ func TestScanRepoClean(t *testing.T) {
 	}
 }
 
+// refine rm-rf: cleanup apt Docker (rm -rf /var/...) BUKAN critical; rm -rf / TETAP critical.
+func TestScanRmRfRefined(t *testing.T) {
+	// Dockerfile cleanup standar — JANGAN false-positive.
+	clean := mkrepo(t, map[string]string{
+		"Dockerfile": "RUN apt-get update && rm -rf /var/lib/apt/lists/*\nRUN rm -rf /tmp/build\n",
+	})
+	if rep := ScanRepo(clean); rep.Critical != 0 {
+		t.Fatalf("apt-cleanup mestinya BUKAN critical, dapet %d (%+v)", rep.Critical, rep.Findings)
+	}
+	// rm -rf / asli → tetap critical.
+	bad := mkrepo(t, map[string]string{"x.sh": "rm -rf /\n"})
+	if rep := ScanRepo(bad); rep.Critical < 1 {
+		t.Fatalf("rm -rf / mestinya critical, dapet %d", rep.Critical)
+	}
+	bad2 := mkrepo(t, map[string]string{"y.sh": "rm -rf /*\n"})
+	if rep := ScanRepo(bad2); rep.Critical < 1 {
+		t.Fatalf("rm -rf /* mestinya critical, dapet %d", rep.Critical)
+	}
+}
+
+// switch: RegisterScanRule nambah pola tanpa edit built-in.
+func TestRegisterScanRule(t *testing.T) {
+	old := extraRules
+	t.Cleanup(func() { extraRules = old })
+	RegisterScanRule("miner-marker", "critical", `(?i)stratum\+tcp://`)
+	dir := mkrepo(t, map[string]string{"cfg.yml": "pool: stratum+tcp://evil:3333\n"})
+	rep := ScanRepo(dir)
+	if rep.Critical < 1 {
+		t.Fatalf("rule custom (miner) mestinya kena, dapet %d (%+v)", rep.Critical, rep.Findings)
+	}
+}
+
 // binary/file gede di-skip (no panic, no false positive).
 func TestScanRepoSkipsBig(t *testing.T) {
 	dir := t.TempDir()
