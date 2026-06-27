@@ -806,11 +806,17 @@ func callLLM(cfg agentConfig, userText string, history []chatTurn, notifyChatID 
 				return fmt.Sprintf("⏳ Udah %d kali nyambung otomatis tapi belum kelar juga — kemungkinan tugasnya kegedean atau muter. Gw STOP biar ga infinite. Pecah jadi bagian lebih kecil atau arahin lebih spesifik ya.", cont)
 			}
 			contPrompt := fmt.Sprintf("[LANJUTAN OTOMATIS #%d] Lo lagi di tengah ngerjain tugas ini & BELUM kelar. LANJUTIN dari progres terakhir (cek brain/memori/hasil sebelumnya — JANGAN ulang dari nol, JANGAN ngaku kelar kalau belum). Kalau udah beneran kelar, jawab hasil FINAL + tutup dengan kata 'SELESAI'.%s%s", next, autoContDelim, base)
-			_ = runTool("ScheduleWakeup", map[string]any{
+			schedRes := runTool("ScheduleWakeup", map[string]any{
 				"delaySeconds": 5,
 				"reason":       "auto-continue tugas panjang (budget chunk abis)",
 				"prompt":       contPrompt,
 			})
+			// JUJUR — anti-ghosting akar: kalau ScheduleWakeup GAGAL (mis. guardian safe-mode
+			// blokir state:write), JANGAN ngaku "udah dijadwalin" (itu boong = ghost). Kasih
+			// pesan recoverable: owner tinggal ketik "lanjut" → harness terusin dari progres.
+			if !strings.Contains(schedRes, "wakeup_id") {
+				return fmt.Sprintf("⏳ Chunk %d kelar TAPI auto-lanjut GAGAL ke-jadwal (%s). Ketik 'lanjut' ya — gw terusin dari progres terakhir, JANGAN ulang dari nol.", next, schedFailReason(schedRes))
+			}
 			return fmt.Sprintf("⏳ Tugasnya panjang — chunk %d kelar, gw udah jadwalin lanjutan OTOMATIS (nyambung sendiri sampe SELESAI, ga perlu lo dorong). Sebentar lagi gw sambung.", next)
 		}
 		reqMap := map[string]any{"model": cfg.Router.Model, "messages": prepMessages(msgs)}
