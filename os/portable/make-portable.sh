@@ -27,6 +27,10 @@ build() { # $1 GOOS  $2 GOARCH  $3 subdir  $4 ext
 	echo "[portable] $sub  (agent + router · $goos/$goarch)"
 	( cd "$REPO/agent"  && GOWORK=off CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
 		go build -ldflags '-s -w' -o "$OUT/bin/$sub/flowork-agent$ext" . )
+	# fw-app-adapter — core_entry app hasil-adopt (repo→app). Wajib sebelah flowork-agent biar
+	# adapterBinPath() nemu (lihat lock/apps-adopt.md). Tanpa ini, fitur adopt mati di portable.
+	( cd "$REPO/agent"  && GOWORK=off CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
+		go build -ldflags '-s -w' -o "$OUT/bin/$sub/fw-app-adapter$ext" ./cmd/fw-app-adapter )
 	( cd "$REPO/router" && GOWORK=off CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
 		go build -ldflags '-s -w' -o "$OUT/bin/$sub/flowork-router$ext" . )
 }
@@ -114,8 +118,8 @@ esac
 # lock its DB there. So run from a local, exec-capable, lockable dir; the stick just delivers.
 WORK="${XDG_CACHE_HOME:-$HOME/.cache}/flowork-portable"
 BIND="$WORK/bin"; mkdir -p "$BIND"
-cp -f "$STICK/bin/$SUB/flowork-agent" "$STICK/bin/$SUB/flowork-router" "$BIND/" 2>/dev/null
-chmod +x "$BIND/flowork-agent" "$BIND/flowork-router" 2>/dev/null || true
+cp -f "$STICK/bin/$SUB/flowork-agent" "$STICK/bin/$SUB/flowork-router" "$STICK/bin/$SUB/fw-app-adapter" "$BIND/" 2>/dev/null
+chmod +x "$BIND/flowork-agent" "$BIND/flowork-router" "$BIND/fw-app-adapter" 2>/dev/null || true
 export FLOWORK_HOME="$WORK/data"; export HOME="$FLOWORK_HOME"; mkdir -p "$FLOWORK_HOME"
 # Guardian: detection-only auto-arm re-baselines every boot and its 5-min sentinel re-verifies
 # the core files — but a freshly-built/distributed binary (and a mutating workspace) makes that a
