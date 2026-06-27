@@ -1,9 +1,9 @@
 package main
 
-// sched_honest_ext.go — NON-frozen (sibling). Anti-ghosting AKAR: pas harness auto-continue
-// manggil ScheduleWakeup TAPI gagal (mis. guardian SAFE-MODE blokir state:write), harness
+// sched_honest_ext.go — FROZEN (chattr +i + hash KERNEL_FREEZE.md). Anti-ghosting AKAR: pas harness
+// auto-continue manggil ScheduleWakeup TAPI gagal (mis. guardian SAFE-MODE blokir state:write), harness
 // JANGAN boong "udah dijadwalin" (itu ghost). schedFailReason kasih alasan ringkas + recoverable.
-// TinyGo-safe (substring, no regexp). Dipakai main.go (auto-continue block).
+// TinyGo-safe (substring, no regexp). Dipakai main.go (auto-continue). 📄 Dok: lock/ERROR_EDUKASI.md.
 
 import "strings"
 
