@@ -344,12 +344,12 @@ func dispatchSingleModel(ctx context.Context, d *sql.DB, req OpenAIRequest, sett
 			safego.GoLabel("logUsage", func() {
 				logUsage(d, keyID, p.ID, req.Model, lr, ls, le, latencyMs)
 			})
-			if status != http.StatusTooManyRequests || attempt >= maxRateLimitRetries {
+			if status != http.StatusTooManyRequests || attempt >= maxRateLimitRetries() {
 				break
 			}
 			wait := backoffDuration(attempt)
 			log.Printf("flow_router 429 (rate-limit) model=%s provider=%s → antri %v lalu retry (%d/%d)",
-				req.Model, p.Name, wait, attempt+1, maxRateLimitRetries)
+				req.Model, p.Name, wait, attempt+1, maxRateLimitRetries())
 			select {
 			case <-time.After(wait):
 			case <-ctx.Done():
