@@ -161,3 +161,9 @@ func (taskRunTool) Run(ctx context.Context, args map[string]any) (tools.Result, 
 		},
 	}, nil
 }
+
+// SELF-REGISTER plug-in (📄 lock/tool-manager.md) — edit/hapus/tambah BEBAS tanpa unfreeze.
+func init() {
+	tools.Register(&taskListTool{})
+	tools.Register(&taskRunTool{})
+}

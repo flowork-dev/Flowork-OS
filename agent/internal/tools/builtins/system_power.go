@@ -1,7 +1,7 @@
 // Flowork OS — Dev: Aola Sahidin — github.com/flowork-os/Flowork-OS · floworkos.com
-// Cara kerja sistem: lihat os/.  ⚠️ FROZEN — jangan edit file ini.
-// Nambah/ubah fitur TANPA buka frozen: pakai SEAM non-frozen + SWITCH
-// (internal/fwswitch/registry.go). Pola lengkap: lock/frozen-core.md
+// 📄 Dok: lock/tool-manager.md — TOOL PLUG-IN (NON-frozen, self-register).
+// Manager (registry/sandbox/interceptor) yg BEKU; tool ini BEBAS diedit/hapus/tambah
+// TANPA buka freeze. Daftar ke papan-colokan (registry beku) via init() di bawah.
 
 package builtins
 
@@ -19,6 +19,9 @@ import (
 	"flowork-gui/internal/agentdb"
 	"flowork-gui/internal/tools"
 )
+
+// SELF-REGISTER ke manager (papan-colokan beku). Hapus file ini → tool ilang, inti tetep berdiri.
+func init() { tools.Register(&systemPowerTool{}) }
 
 type systemPowerTool struct{}
 

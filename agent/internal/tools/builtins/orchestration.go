@@ -292,3 +292,11 @@ func (goalDoneTool) Run(ctx context.Context, args map[string]any) (tools.Result,
 		"total_done": len(log),
 	}}, nil
 }
+
+// SELF-REGISTER plug-in (📄 lock/tool-manager.md) — edit/hapus/tambah BEBAS tanpa unfreeze.
+func init() {
+	tools.Register(&planReadTool{})
+	tools.Register(&planWriteTool{})
+	tools.Register(&todoTool{})
+	tools.Register(&goalDoneTool{})
+}

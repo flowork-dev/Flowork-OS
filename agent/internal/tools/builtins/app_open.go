@@ -18,6 +18,9 @@ import (
 	"flowork-gui/internal/tools"
 )
 
+// SELF-REGISTER (plug-in NON-frozen, 📄 lock/tool-manager.md). Edit/hapus bebas tanpa unfreeze.
+func init() { tools.Register(&appOpenTool{}) }
+
 var appDefaults = map[string]map[string][]string{
 	"chrome": {
 		"linux":   {"google-chrome", "google-chrome-stable", "chromium", "chromium-browser"},

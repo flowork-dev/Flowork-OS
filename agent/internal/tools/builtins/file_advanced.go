@@ -313,3 +313,10 @@ DONE:
 		"scanned_bytes": scanned,
 	}}, nil
 }
+
+// SELF-REGISTER plug-in (📄 lock/tool-manager.md) — edit/hapus/tambah BEBAS tanpa unfreeze.
+func init() {
+	tools.Register(&editTool{})
+	tools.Register(&globTool{})
+	tools.Register(&grepTool{})
+}

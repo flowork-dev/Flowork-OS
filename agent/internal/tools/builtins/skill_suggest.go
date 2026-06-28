@@ -55,3 +55,8 @@ func (skillSuggestTool) Run(ctx context.Context, args map[string]any) (tools.Res
 		"candidates": cands,
 	}}, nil
 }
+
+// SELF-REGISTER plug-in (📄 lock/tool-manager.md) — edit/hapus/tambah BEBAS tanpa unfreeze.
+func init() {
+	tools.Register(&skillSuggestTool{})
+}

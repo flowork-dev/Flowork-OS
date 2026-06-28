@@ -1247,7 +1247,14 @@ func (h *Host) InvokeAgentMessageTimeout(ctx context.Context, agentID, text, cal
 	}
 	inst := h.Runtime.Get(agentID)
 	if inst == nil {
-		return "", fmt.Errorf("agent %q not loaded", agentID)
+		// LAZY-LOAD: agent dormant/ke-unload (mis. mandor di-reap) → coba reload dari disk
+		// SEBELUM nyerah, biar wake/invoke ga "nembak hampa". (fix: wake agent dormant)
+		if rerr := h.ReloadAgent(agentID); rerr == nil {
+			inst = h.Runtime.Get(agentID)
+		}
+		if inst == nil {
+			return "", fmt.Errorf("agent %q not loaded (lazy-reload gagal)", agentID)
+		}
 	}
 	args := map[string]any{
 		"text": text,

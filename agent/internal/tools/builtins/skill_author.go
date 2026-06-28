@@ -103,3 +103,8 @@ func (skillAuthorTool) Run(ctx context.Context, args map[string]any) (tools.Resu
 		Note:   "skill vetted + saved (recallable)",
 	}, nil
 }
+
+// SELF-REGISTER plug-in (📄 lock/tool-manager.md) — edit/hapus/tambah BEBAS tanpa unfreeze.
+func init() {
+	tools.Register(&skillAuthorTool{})
+}

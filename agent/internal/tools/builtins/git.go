@@ -17,6 +17,9 @@ import (
 	"flowork-gui/internal/tools"
 )
 
+// SELF-REGISTER (plug-in NON-frozen, 📄 lock/tool-manager.md). Edit/hapus bebas tanpa unfreeze.
+func init() { tools.Register(&gitTool{}) }
+
 type gitTool struct{}
 
 func (gitTool) Name() string       { return "git" }

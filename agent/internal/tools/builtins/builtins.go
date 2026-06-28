@@ -17,50 +17,28 @@ import (
 )
 
 func Init() {
+	// Primitive sederhana — tetep di anchor beku ini.
 	tools.Register(&echoTool{})
 	tools.Register(&nowTool{})
 	tools.Register(&memGetTool{})
 	tools.Register(&memSetTool{})
 	tools.Register(&memDelTool{})
 
+	// File BEKU yg nyimpen seam/helper dipakai frozen-core → tool-nya daftar di sini:
+	//   agent_command.go (InvokeAgentFunc), shell.go (capWriter/scrubEnv/shellDenyPatterns),
+	//   file.go (validateCategoryAndName), web.go (isBlockedIP), telegram.go (telegramAPIBase).
+	tools.Register(&agentCommandTool{})
+	tools.Register(&bashTool{})
 	tools.Register(&fileReadTool{})
 	tools.Register(&fileWriteTool{})
 	tools.Register(&fileListTool{})
-
-	tools.Register(&skillSuggestTool{})
-	tools.Register(&skillAuthorTool{})
-
+	tools.Register(&webFetchTool{})
 	tools.Register(&telegramSendTool{})
 
-	tools.Register(&webFetchTool{})
-
-	// web_search/archive/html_extract/pdf_read → SELF-REGISTER di web_research.go init()
-	// (file itu sengaja non-frozen biar scraper bisa di-maintain tanpa unlock).
-
-	tools.Register(&taskListTool{})
-	tools.Register(&taskRunTool{})
-
-	tools.Register(&bashTool{})
-
-	tools.Register(&editTool{})
-	tools.Register(&globTool{})
-	tools.Register(&grepTool{})
-
-	tools.Register(&gitTool{})
-
-	tools.Register(&skillTool{})
-	tools.Register(&skillSearchTool{})
-
-	tools.Register(&planReadTool{})
-	tools.Register(&planWriteTool{})
-	tools.Register(&todoTool{})
-	tools.Register(&goalDoneTool{})
-
-	tools.Register(&systemPowerTool{})
-
-	tools.Register(&appOpenTool{})
-
-	tools.Register(&agentCommandTool{})
+	// Tool PLUG-IN (NON-frozen) SELF-REGISTER via init() di file masing2 — edit/hapus/tambah
+	// TANPA buka freeze: file_advanced.go, skill.go, skill_suggest.go, skill_author.go,
+	//   taskflow_tools.go, orchestration.go, web_research.go, git.go, system_power.go, app_open.go.
+	// 📄 lock/tool-manager.md
 }
 
 type echoTool struct{}

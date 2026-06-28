@@ -13,6 +13,9 @@ import (
 	"flowork-gui/internal/tools"
 )
 
+// ⚠️ TETAP FROZEN: file ini nyimpen var seam `InvokeAgentFunc` yg DIPAKAI frozen-core (main.go).
+// Jadi BUKAN plug-in murni (delete-test gagal kalau dihapus). Tool-nya didaftar di builtins.go Init().
+// (Kalau mau jadi plug-in: seam-split — pindah InvokeAgentFunc ke file seam beku, tool ke file lain.)
 var InvokeAgentFunc func(ctx context.Context, agentID, text, caller string) (string, error)
 
 type agentCommandTool struct{}

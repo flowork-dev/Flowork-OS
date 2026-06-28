@@ -115,3 +115,9 @@ func routerClientFromCtx() *routerclient.Client {
 
 	return routerclient.NewFromAgentURL("")
 }
+
+// SELF-REGISTER plug-in (📄 lock/tool-manager.md) — edit/hapus/tambah BEBAS tanpa unfreeze.
+func init() {
+	tools.Register(&skillTool{})
+	tools.Register(&skillSearchTool{})
+}
