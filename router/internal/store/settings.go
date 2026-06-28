@@ -111,6 +111,7 @@ func defaultSettings() Settings {
 			MaxSnippetChars:      600,
 			Skills:               true,
 			SkillTopK:            3,
+			MaxSkillBodyChars:    700, // cap default anti-muntah (skill gede 24×11KB → +286% tok). 0=legacy uncap.
 			AlwaysOn:             true,
 			InjectConstitution:   true,
 			ConstitutionTopK:     20,
