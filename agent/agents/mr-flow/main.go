@@ -1551,12 +1551,26 @@ func runTool(name string, args map[string]any) string {
 	if resp.Status >= 400 {
 		return fmt.Sprintf(`{"error":"tool http %d"}`, resp.Status)
 	}
-	const maxToolResult = 8 * 1024
+	max := toolResultMax()
 	out := string(resp.Body)
-	if len(out) > maxToolResult {
-		out = out[:maxToolResult] + " …[truncated]"
+	if len(out) > max {
+		out = out[:max] + fmt.Sprintf(" …[truncated %d→%d char; naikin FLOWORK_TOOL_RESULT_MAX / baca bagian spesifik]", len(out), max)
 	}
 	return out
+}
+
+// toolResultMax — cap ukuran 1 hasil tool yang di-feed ke LLM (char). Default 16KB
+// (naik dari 8KB: caching udah nge-offset biaya token → mr-flow bisa "liat" lebih
+// banyak isi file/grep = lebih jago tugas kode, mirip Claude Code). Switch GUI
+// FLOWORK_TOOL_RESULT_MAX (bytes). Kekecilan = tugas kode ke-potong; kegedean =
+// context cepet penuh. Range aman 4096–65536.
+func toolResultMax() int {
+	if v := strings.TrimSpace(os.Getenv("FLOWORK_TOOL_RESULT_MAX")); v != "" {
+		if n := atoiSafe(v); n >= 1024 {
+			return n
+		}
+	}
+	return 16 * 1024
 }
 
 // categoryLive — true kalau Category Task `cat` masih ADA di task_list live (crew
