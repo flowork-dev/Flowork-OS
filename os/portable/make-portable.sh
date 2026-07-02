@@ -84,8 +84,13 @@ if [ "$SIDECAR_ENABLED" != "0" ]; then
                 # READ-ONLY ke brain asli. Skip *.sqlite mentah + WAL + backup OLD.
                 echo "[portable]   + router/brain (snapshot konsisten, anti-poison)"
                 mkdir -p "$OUT/sidecar/brain"
-                if [ -f "$REPO/router/brain/flowork-brain.sqlite" ] && [ -x "$REPO/os/brain-export.sh" ]; then
-                    bash "$REPO/os/brain-export.sh" "$REPO/router/brain/flowork-brain.sqlite" \
+                # PUBLIC (audit 2026-07-03): ship the SANITIZED/slimmed starter brain, NOT the owner's
+                # live personal brain. Set FLOWORK_PUBLIC_BRAIN=/path/to/clean-brain.sqlite for public
+                # builds. Without it, falls back to the live brain (dev/Full only). The live brain holds
+                # the owner's biography + name/dob/family → must never ship publicly.
+                BRAIN_SRC="${FLOWORK_PUBLIC_BRAIN:-$REPO/router/brain/flowork-brain.sqlite}"
+                if [ -f "$BRAIN_SRC" ] && [ -x "$REPO/os/brain-export.sh" ]; then
+                    bash "$REPO/os/brain-export.sh" "$BRAIN_SRC" \
                          "$OUT/sidecar/brain/flowork-brain.sqlite" || echo "[portable]   WARN: brain-export gagal"
                 fi
                 find "$REPO/router/brain" -maxdepth 1 -type f \
@@ -99,6 +104,14 @@ if [ "$SIDECAR_ENABLED" != "0" ]; then
             echo "[portable]   skip (ga ada): $rel"
         fi
     done
+    # PRIVACY (audit 2026-07-03): ship agent DEFINITIONS only — strip per-agent runtime state
+    # (workspace/state.db + loket.db = owner's conversations/memory). Agents recreate workspace on
+    # first run. Root fix for the same leak patched in build-flowork-os.sh (mr-flow state.db held
+    # the owner's biography). Applies to every sidecar agent dir.
+    if [ -d "$OUT/sidecar/agents" ]; then
+        find "$OUT/sidecar/agents" -type d -name workspace -prune -exec rm -rf {} + 2>/dev/null || true
+        echo "[portable]   stripped agent runtime workspace state (privacy: definitions only)"
+    fi
 fi
 
 # ── DEV/Full data-seed ───────────────────────────────────────────────────────

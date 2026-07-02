@@ -138,6 +138,11 @@ if [ -d "$AGENT_SRC/agents" ]; then
 	fi
 	mkdir -p "$ROOTFS/usr/share/flowork/agents-seed"
 	cp -a "$AGENT_SRC/agents/." "$ROOTFS/usr/share/flowork/agents-seed/"
+	# PRIVACY (audit 2026-07-03): ship agent DEFINITIONS only, NOT the owner's per-agent runtime
+	# state (workspace/state.db + loket.db = personal conversations/memory). PUBLIC = fresh agents;
+	# each agent recreates its own workspace on first run. Without this, mr-flow's state.db leaked
+	# the owner's biography (name/dob/family) into every image. Root fix, not a post-process patch.
+	find "$ROOTFS/usr/share/flowork/agents-seed" -type d -name workspace -prune -exec rm -rf {} + 2>/dev/null || true
 	cp -a "$AGENT_SRC/templates" "$ROOTFS/usr/share/flowork/" 2>/dev/null || true   # template wasm buat AI Studio bikin agent baru
 	# FIX (audit 2026-07-02): dulu img BUILD sidecar tools tapi GA di-copy → appliance ship 0 tool
 	# ("dev jalan, img mati" — bug sama yg portable udah dibenerin). Copy tools ke /usr/local/lib/
