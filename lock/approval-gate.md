@@ -37,7 +37,19 @@ E2E bahasa manusia: minta mr-flow `mkdir` → ke-hold `pending owner approval qu
 `git status` (read-only) tetap jalan tanpa approval. Unit: `TestClassifyCommand_GitSubcommand`
 + `TestApprovalGatePolicy_Modes` PASS. Build/vet/test/TestKernelFreeze hijau.
 
-## Sisa F-B (belum, buat penerus)
+## Tambahan 2026-07-02 (sesi sore-2, semua FROZEN perintah owner)
+- **Notif Telegram pending** KELAR: `agent/feature_approval_notify.go` — poller 60s
+  (pola deadair/wakeup, skip agent tanpa tabel, dedup per proses, batch 1 pesan).
+  Switch `FLOWORK_APPROVAL_NOTIFY` (default ON).
+- **Seam allowlist auth** (Rule #7): `internal/floworkauth/allow_seam.go` —
+  `RegisterLoopbackPublic(path, methods...)` dari file non-frozen; invarian DIPAKSA
+  terpusat (loopback + anti cross-site + method match) → ext salah pun ga bisa buka
+  celah remote. `handlers.go` dibuka-sadar 1x (fallback `loopbackAllowExt`), re-lock.
+- **`/api/health`** KELAR (F-F): `feature_health.go` + `allow_health_ext.go` —
+  loopback GET tanpa sesi; payload doctor-ringan: status/version/agents_loaded/router_ok.
+- **Seed settings user service** (F-F): `os/lockbox/setup.sh` stage 4 — copy
+  `flowork_settings.json` ke home user `flowork` KALAU BELUM ADA (ga nimpa).
+
+## Sisa F-B (buat penerus)
 - Panel GUI antrian pending (endpoint udah ada; tinggal frontend — tab Protector).
-- Notif Telegram ke owner pas ada pending baru (biar ga nunggu buka GUI).
 - Mode per-agent penuh (relaksasi per-agent SENGAJA ga dibikin — keputusan keamanan).

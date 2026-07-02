@@ -343,7 +343,11 @@ func isPublicPath(r *http.Request) bool {
 		// FASE 8 Curator — list/grade/curate skill per-agent (owner-local).
 		return isLocalRequest(r)
 	}
-	return false
+	// PAPAN COLOKAN (Rule #7, 2026-07-02): endpoint loopback baru dicolok dari file
+	// NON-FROZEN via RegisterLoopbackPublic (allow_seam.go) — file beku ini GA PERLU
+	// dibuka lagi. Seam MAKSA loopback + cross-site-cut terpusat: ext ga akan bisa
+	// buka celah remote walau kodenya salah.
+	return loopbackAllowExt(path, r)
 }
 
 // isCrossSiteBrowser — true kalau request kemungkinan besar dipicu DARI origin

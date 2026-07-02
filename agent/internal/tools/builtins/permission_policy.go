@@ -32,6 +32,8 @@ var readOnlyTools = map[string]bool{
 	"stat_summary": true, "interaction_recall": true, "edu_error_lookup": true, "karma_query": true,
 	// surface-vocabulary read-only tools (claude_tools.go)
 	"TaskOutput": true, "StructuredOutput": true,
+	// F-G checkpointing (file_checkpoint.go)
+	"file_checkpoints": true,
 }
 
 func init() {
