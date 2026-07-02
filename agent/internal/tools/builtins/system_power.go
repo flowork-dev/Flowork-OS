@@ -1,4 +1,7 @@
 // Flowork OS — Dev: Aola Sahidin — github.com/flowork-os/Flowork-OS · floworkos.com
+// ⚠️ FROZEN — jangan edit file ini. 📄 Dok: lock/tools.md
+// Nambah aksi power TANPA buka frozen: pakai SEAM tools.Register() di file sibling non-frozen.
+// Flowork OS — Dev: Aola Sahidin — github.com/flowork-os/Flowork-OS · floworkos.com
 // 📄 Dok: lock/tool-manager.md — TOOL PLUG-IN (NON-frozen, self-register).
 // Manager (registry/sandbox/interceptor) yg BEKU; tool ini BEBAS diedit/hapus/tambah
 // TANPA buka freeze. Daftar ke papan-colokan (registry beku) via init() di bawah.

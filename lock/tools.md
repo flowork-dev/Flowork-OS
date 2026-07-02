@@ -246,6 +246,21 @@ Catat alasan unfreeze di KERNEL_FREEZE.md (pola entri bertanggal yang udah ada).
 
 ---
 
+## 9b. AUDIT-FREEZE 2026-07-03 — 12 builtin tool terbukti WORK
+Audit fungsional runtime (`POST /api/agents/tools/run?id=mr-flow`, eksekusi nyata tiap tool):
+144 tool asli di registry → 142 ✅ terbukti work (semua di-fire, termasuk system_power/self_prompt_set/
+telegram_send dgn izin DEV), 2 ⚠️ wired-butuh-konfig (`web_search`→provider mojeek down, `telegram_send`
+→bot-token blm set). Detail: `tugas.md`.
+
+13 file builtin STABIL + terbukti work di-FREEZE (chattr +i + hash di KERNEL_FREEZE.md), semua
+lewat SEAM `tools.Register()` (delete-test: build tetap ijo tanpa mereka → self-sufficient):
+`agent_run, app_open, file_advanced, git, market, orchestration, shell_guard, skill, skill_author,
+skill_suggest, taskflow_tools, worktree_tool, system_power`.
+TIDAK di-freeze: `evolve_propose_tool` (header eksplisit "LOCKED ≠ FREEZE, editable"),
+`v8_extras.go`/`self_prompt_set` (ADA BUG versioning: hardcode version=1 → update slot gagal; fix dulu),
+`web_research` (tool `web_search` ⚠ provider eksternal tak terbukti).
+Nambah tool sejenis → file sibling baru `tools.Register(...)`, JANGAN buka file frozen.
+
 ## 10. CARA TES (bukti hidup)
 - Sidecar discover: `POST /api/tools/sidecar` → daftar tool + scope.
 - Agent bikin tool: `POST /api/agents/tools/run?id=<agent>` body `tool_create{...}` → `{ok, scope:private, build_log}`.

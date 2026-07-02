@@ -1,3 +1,6 @@
+// Flowork OS — Dev: Aola Sahidin — github.com/flowork-os/Flowork-OS · floworkos.com
+// ⚠️ FROZEN — jangan edit file ini. 📄 Dok: lock/tools.md
+// Nambah/ubah tool TANPA buka frozen: pakai SEAM tools.Register() di file sibling non-frozen.
 // market.go — the investment team's "eyes" exposed as an engine tool.
 //
 // Agents cannot reach the /api/market/quote HTTP endpoint (the auth middleware

@@ -1,3 +1,6 @@
+// Flowork OS — Dev: Aola Sahidin — github.com/flowork-os/Flowork-OS · floworkos.com
+// ⚠️ FROZEN — jangan edit file ini. 📄 Dok: lock/tools.md
+// Nambah/ubah tool TANPA buka frozen: pakai SEAM tools.Register() di file sibling non-frozen.
 // shell_guard.go — `shell`: the hardened exec tool (P1).
 //
 // Same execution surface as the locked `bash` tool (shell.go) — but danger is judged

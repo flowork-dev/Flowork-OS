@@ -1,3 +1,6 @@
+// Flowork OS — Dev: Aola Sahidin — github.com/flowork-os/Flowork-OS · floworkos.com
+// ⚠️ FROZEN — jangan edit file ini. 📄 Dok: lock/tools.md
+// Nambah/ubah tool TANPA buka frozen: pakai SEAM tools.Register() di file sibling non-frozen.
 // worktree_tool.go — F-G: git worktree isolation (kerja repo besar di salinan
 // terpisah, ga ganggu working-tree utama). Pola sama dgn delete-test internal.
 // 📄 Dok: FLowork_os/lock/worktree.md

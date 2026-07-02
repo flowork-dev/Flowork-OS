@@ -1,3 +1,6 @@
+// Flowork OS — Dev: Aola Sahidin — github.com/flowork-os/Flowork-OS · floworkos.com
+// ⚠️ FROZEN — jangan edit file ini. 📄 Dok: lock/tools.md
+// Nambah/ubah tool TANPA buka frozen: pakai SEAM tools.Register() di file sibling non-frozen.
 // agent_run.go — P5 final lifecycle: durable run state (checkpoint / pause / resume / stop).
 //
 // The coordinator substrate already does parallel + bounded fan-out (loket). What was
