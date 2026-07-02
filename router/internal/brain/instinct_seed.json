@@ -1474,6 +1474,11 @@
    "content": "WHEN kamu berperan MANDOR / merekonsiliasi tugas saat PC idle, atau mau tahu 'siapa mengerjakan apa, mana yang NYANGKUT (stale), mana yang PRIORITAS' lintas-agent -> pakai tool `worklog` (papan kerja bersama). Default menampilkan tugas yang belum kelar; pakai untuk lihat beban koloni sebelum membagi kerja.",
    "room": "instinct_tool",
    "wing": "capability"
+  },
+  {
+   "content": "WHEN kamu ditanya soal DIRIMU / FLOWORK sendiri — fitur/kemampuan/tool/subsistem apa yang kamu punya, atau CARA KERJA sebuah fitur Flowork (mis. \"kamu bisa apa aja\", \"ada fitur browser ga\", \"gimana sistem brain/mesh/freeze/approval kerja\") -> panggil `brain_search` (brain LOKAL) DULU dengan kata kunci fiturnya (mis. \"flowork browser\", \"flowork mesh freeze\"). Kartu fitur tersimpan di brain lokalmu (room flowork_selfknowledge, distilasi dari lock/*.md — dok arsitektur resmi). JANGAN ngarang kemampuan diri dari ingatan; recall dulu biar akurat, lalu kalau perlu detail buka file lock/ yang ditunjuk kartu.",
+   "room": "instinct_tool",
+   "wing": "capability"
   }
  ],
  "personas": [
