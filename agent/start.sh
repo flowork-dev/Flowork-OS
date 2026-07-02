@@ -3,8 +3,8 @@
 #
 # Layout:
 #   bin/flowork-gui    binary hasil build (auto re-build kalau source lebih baru)
-#   /tmp/flowork-gui.pid   PID proses jalan
-#   /tmp/flowork-gui.log   stdout + stderr
+#   $RUN_DIR/flowork-gui.pid   PID proses jalan   (RUN_DIR per-user, lihat bawah)
+#   $RUN_DIR/flowork-gui.log   stdout + stderr    (+ symlink kompat /tmp/flowork-gui.log)
 #
 # Convention:
 #   exit 0   sukses (sudah jalan atau baru di-start)
@@ -26,8 +26,18 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
 BIN="$ROOT/bin/flowork-gui"
-PID_FILE="/tmp/flowork-gui.pid"
-LOG_FILE="/tmp/flowork-gui.log"
+# CABUT-AKAR (2026-07-02): dulu pid/log hardcode /tmp/flowork-gui.* — path FIX yang
+# dipakai bareng >1 user (mis. mrflow manual vs service user `flowork`) → file punya
+# user lain + sticky /tmp = "Permission denied" → service GAGAL BOOT. Akar = shared
+# fixed path; fix = runtime dir PER-USER (no-hardcode, multi-OS). Override: FLOWORK_RUN_DIR.
+RUN_DIR="${FLOWORK_RUN_DIR:-${XDG_RUNTIME_DIR:-/tmp}/flowork-$(id -un)}"
+mkdir -p "$RUN_DIR" 2>/dev/null || RUN_DIR="$(mktemp -d)"
+PID_FILE="$RUN_DIR/flowork-gui.pid"
+LOG_FILE="$RUN_DIR/flowork-gui.log"
+# Kompat: `tail /tmp/flowork-gui.log` (kebiasaan QC/dok lama) tetap jalan lewat symlink.
+# Best-effort: kalau path lama punya user lain (ga bisa diganti), skip diam-diam.
+ln -sfn "$LOG_FILE" /tmp/flowork-gui.log 2>/dev/null || true
+ln -sfn "$PID_FILE" /tmp/flowork-gui.pid 2>/dev/null || true
 ADDR="${FLOWORK_ADDR:-127.0.0.1:1987}"
 
 # .desktop launchers run dengan PATH minim — Go SDK custom (mis. di
@@ -64,7 +74,15 @@ fi
 
 # Cek port masih dipake proses orphan?
 if ss -tlnp 2>/dev/null | grep -q ":${ADDR##*:} "; then
-  c_err "Port ${ADDR##*:} masih dipake proses lain. Cek:"
+  # PID-file sekarang per-user → instance yang di-start USER LAIN ga keliatan di cek
+  # atas. Kalau port udah jawab HTTP = flowork-gui udah hidup → idempoten (exit 2),
+  # BUKAN failure — biar systemd/start ulang ga dianggap error.
+  if curl -s -m 2 -o /dev/null "http://$ADDR/" 2>/dev/null; then
+    c_warn "flowork-gui sudah jalan di http://$ADDR (instance user lain / sesi lama)"
+    c_info "Pakai ./stop.sh atau ./restart.sh dari user yang sama kalau mau ganti."
+    exit 2
+  fi
+  c_err "Port ${ADDR##*:} masih dipake proses lain (bukan HTTP flowork). Cek:"
   ss -tlnp | grep ":${ADDR##*:} " || true
   c_info "Jalankan ./stop.sh dulu, atau set FLOWORK_ADDR=127.0.0.1:PORT_LAIN"
   exit 1

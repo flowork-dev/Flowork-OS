@@ -137,6 +137,16 @@ type AnthropicResponse struct {
 	} `json:"usage"`
 }
 
+// applyInjectShaper — ⭐ SEAM (Rule 7 POLA B, 2026-07-02 owner-approved): pembentuk
+// request PASCA semua injeksi & filter tool (budget agregat system-inject, sticky-union
+// tool cache-aman, reorder cache-aware masa depan). Default no-op = perilaku lama.
+// Override via sibling non-frozen (inject_budget_ext.go / tools_sticky_ext.go) TANPA
+// buka file frozen ini. Sibling dihapus → balik no-op aman.
+// 📄 Dok: FLowork_os/lock/prompt-diet.md
+var applyInjectShaper = func(ctx context.Context, req OpenAIRequest, settings *store.Settings) OpenAIRequest {
+	return req
+}
+
 func DispatchChatCompletion(ctx context.Context, req OpenAIRequest) (*OpenAIResponse, int, error) {
 	d, err := store.Open()
 	if err != nil {
@@ -181,6 +191,8 @@ func DispatchChatCompletion(ctx context.Context, req OpenAIRequest) (*OpenAIResp
 	maybeInjectInstinct(ctx, &req, settings)
 
 	req = maybeFilterTools(ctx, req, settings)
+
+	req = applyInjectShaper(ctx, req, settings)
 
 	resolvedModel, pinnedProvider := resolveModel(d, req.Model)
 	req.Model = resolvedModel

@@ -118,7 +118,7 @@ FLOWORK_RESILIENCE_OFF|off|Matiin agent resilience
 FLOWORK_RESOLVE_MINSCORE|0.86|Ambang entity-resolution dedup graph
 FLOWORK_RL_MAX_RETRY|6|Retry saat 429 sebelum fallback
 FLOWORK_ROUTER_HTTP_TIMEOUT|300|Timeout request upstream LLM (boot)
-FLOWORK_ROUTER_RETRY|off|Retry router transient backoff
+FLOWORK_ROUTER_RETRY|5|Jumlah attempt maksimal retry router transient (angka; 1=tanpa retry)
 FLOWORK_ROUTER_TIMEOUT|30|Timeout HTTP router client (detik)
 FLOWORK_ROUTER_URL|settings|Router URL routerclient
 FLOWORK_SCANNER_AUTOSCAN|on|Auto-scan kode saat berubah

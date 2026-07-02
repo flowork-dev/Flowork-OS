@@ -215,6 +215,11 @@ func (toolLookupTool) Run(ctx context.Context, args map[string]any) (tools.Resul
 			"name":       tool.Name(),
 			"capability": tool.Capability(),
 			"schema":     tool.Schema(),
+			// Fix defer #2C (2026-07-02): tanpa arahan eksplisit, model abis lookup malah
+			// ngerakit tool baru (tool_create) padahal tool-nya UDAH aktif → boros iterasi.
+			"note": "Tool ini AKTIF & siap — panggil `" + tools.DisplayName(tool.Name()) +
+				"` LANGSUNG di langkah berikutnya pakai parameter schema di atas. " +
+				"JANGAN bikin tool baru (tool_create) untuk kebutuhan ini.",
 		},
 	}, nil
 }

@@ -28,6 +28,15 @@ import (
 	"github.com/flowork-os/flowork_Router/internal/store"
 )
 
+// enrichRetrieve — ⭐ SEAM (Rule 7 POLA B, 2026-07-02 owner-approved): sumber snippet
+// enrichment. Default = perilaku lama (SemanticRetrieve, skor dinormalisasi ke top-hit).
+// Override via sibling non-frozen enrich_selective_ext.go (lantai relevansi absolut,
+// switch GUI FLOWORK_ENRICH_MINSCORE) TANPA buka file frozen ini. Sibling dihapus →
+// balik default aman. 📄 Dok: FLowork_os/lock/prompt-diet.md
+var enrichRetrieve = func(ctx context.Context, db *sql.DB, query string, opts brain.RetrieveOpts) ([]brain.Snippet, error) {
+	return brain.SemanticRetrieve(ctx, db, query, opts)
+}
+
 // brainEnrichInfo carries what was injected, so the dispatcher can record the
 // interaction for compounding after the answer is known. nil = not enriched.
 type brainEnrichInfo struct {
@@ -92,7 +101,7 @@ func maybeEnrichBrain(ctx context.Context, req *OpenAIRequest, settings *store.S
 	}
 	// #6 (owner 2026-06-16): auto-context agent pakai SemanticRetrieve (by-MAKNA) — grounding agent
 	// jadi semantik, bukan keyword. Fallback FTS otomatis selama index belum jadi.
-	snips, err := brain.SemanticRetrieve(ctx, db, query, brain.RetrieveOpts{
+	snips, err := enrichRetrieve(ctx, db, query, brain.RetrieveOpts{
 		Limit: topK, Wings: settings.Brain.Wings, MaxContentLen: maxLen,
 	})
 	if err != nil {

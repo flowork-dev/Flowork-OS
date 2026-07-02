@@ -16,7 +16,11 @@ fi
 trap '[ "$PAUSE" = "1" ] && { printf "\n[Enter untuk tutup] "; read -r _; }' EXIT
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-PID_FILE="/tmp/flowork-gui.pid"
+# Samain sama start.sh: runtime dir per-user (cabut-akar bentrok /tmp antar-user).
+RUN_DIR="${FLOWORK_RUN_DIR:-${XDG_RUNTIME_DIR:-/tmp}/flowork-$(id -un)}"
+PID_FILE="$RUN_DIR/flowork-gui.pid"
+# Fallback path legacy (sesi lama sebelum fix) biar stop tetep nemu prosesnya.
+[ -f "$PID_FILE" ] || { [ -f /tmp/flowork-gui.pid ] && PID_FILE=/tmp/flowork-gui.pid; }
 
 c_ok()   { printf '\e[32m%s\e[0m\n' "$*"; }
 c_warn() { printf '\e[33m%s\e[0m\n' "$*"; }

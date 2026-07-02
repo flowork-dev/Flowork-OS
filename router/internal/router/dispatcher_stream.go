@@ -44,6 +44,13 @@ func DispatchChatCompletionStream(ctx context.Context, req OpenAIRequest, w http
 		}
 	}
 
+	// Parity fix 2026-07-02: jalur non-stream nyuntik doktrin SACRED (konstitusi) buat
+	// model non-light, jalur stream dulu CUMA di cabang fallback → chat stream jalan
+	// TANPA doktrin. Samain gate-nya persis dispatcher.go.
+	if !isCrewLightModel(req.Model) {
+		maybeInjectConstitution(ctx, &req, settings)
+	}
+
 	maybeEnrichBrain(ctx, &req, settings)
 
 	maybeInjectAntibodies(ctx, &req, settings)
@@ -51,6 +58,8 @@ func DispatchChatCompletionStream(ctx context.Context, req OpenAIRequest, w http
 	maybeInjectInstinct(ctx, &req, settings)
 
 	req = maybeFilterTools(ctx, req, settings)
+
+	req = applyInjectShaper(ctx, req, settings)
 
 	resolvedModel, pinnedProvider := resolveModel(d, req.Model)
 	req.Model = resolvedModel
