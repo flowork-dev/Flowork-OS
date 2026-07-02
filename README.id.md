@@ -79,33 +79,11 @@ Berjalan di mesinmu sendiri. Privat, offline, tanpa server perusahaan lain. Isi 
 **🌐 Mesh — satu wangsa, lintas generasi.**
 Node keluarga saling terhubung dengan kepercayaan berlapis. Warisan pikiran kakek mengalir ke ayah, ke cucu — satu garis keturunan, satu pikiran yang terus hidup.
 
-```
-          KAMU ──►  menuangkan pikiran · pengalaman · cara memecahkan masalah
-                                       │
-   ┌──────────────────────────── FLOWORK ────────────────────────────┐
-   │                                                                  │
-   │      BRAIN              INSTING              PELAJARAN            │
-   │    (tak lupa)      (pola pengalaman)     (hikmah kegagalan)       │
-   │         └───────────────────┼────────────────────┘               │
-   │                             ▼                                    │
-   │                 ╔════════════════════════╗                       │
-   │                 ║        DreamGraph       ║                       │
-   │                 ║    INGATAN 4 DIMENSI    ║                       │
-   │                 ╚════════════════════════╝                       │
-   │            merajut semuanya jadi satu pemahaman utuh             │
-   │                                                                  │
-   │   ┌──────────────────────────────────────────────────────────┐  │
-   │   │   AI LOKAL — di mesinmu · privat · offline · milikmu      │  │
-   │   └──────────────────────────────────────────────────────────┘  │
-   └───────────────────────────────┬──────────────────────────────────┘
-                                    │
-             KETURUNANMU ──►  bertanya · belajar · menerima nasehatmu
-                               bahkan ketika kamu sudah tiada
-                                    │
-                         ┌───────── MESH ─────────┐
-                    [ Kakek ] ◄───► [ Ayah ] ◄───► [ Cucu ]
-               satu wangsa · satu warisan pikiran · lintas generasi
-```
+<div align="center">
+
+<img src="hero.png" alt="Flowork — pikiranmu terjaga dan diwariskan lintas generasi" width="900">
+
+</div>
 
 ---
 

@@ -80,33 +80,11 @@ It runs on your own machine. Private, offline, with no other company's servers. 
 **🌐 Mesh — one lineage, across generations.**
 Family nodes connected with layered trust. A grandfather's mind inheritance flows to the father, to the grandchild — one bloodline, one mind that keeps on living.
 
-```
-        YOU ──►  pour in your mind · experience · way of solving problems
-                                     │
-  ┌───────────────────────────── FLOWORK ─────────────────────────────┐
-  │                                                                    │
-  │     BRAIN                INSTINCT               LESSONS            │
-  │  (never forgets)   (patterns of experience)  (wisdom of failure)  │
-  │        └────────────────────┼─────────────────────┘               │
-  │                             ▼                                      │
-  │                ╔═════════════════════════════╗                     │
-  │                ║          DreamGraph          ║                     │
-  │                ║     MEMORY · 4 DIMENSIONS     ║                     │
-  │                ╚═════════════════════════════╝                     │
-  │            weaving it all into one whole understanding             │
-  │                                                                    │
-  │   ┌────────────────────────────────────────────────────────────┐  │
-  │   │   LOCAL AI — on your machine · private · offline · yours    │  │
-  │   └────────────────────────────────────────────────────────────┘  │
-  └────────────────────────────────┬───────────────────────────────────┘
-                                    │
-          YOUR DESCENDANTS ──►  ask · learn · receive your counsel
-                                even when you are gone
-                                    │
-                        ┌────────── MESH ──────────┐
-                [ Grandfather ] ◄──► [ Father ] ◄──► [ Grandchild ]
-              one lineage · one mind inheritance · across generations
-```
+<div align="center">
+
+<img src="hero.png" alt="Flowork — your mind preserved and passed down across generations" width="900">
+
+</div>
 
 ---
 
