@@ -166,7 +166,13 @@ func architectChat(ctx context.Context, host *kernelhost.Host, store *floworkdb.
 		if i < nh-archKeepRecent && role == "assistant" && archAnchorNoise(m.Content) {
 			continue
 		}
-		messages = append(messages, map[string]any{"role": role, "content": m.Content})
+		// Multimodal paste (chat_vision.go): turn user yg bawa gambar dibungkus jadi
+		// content-block JSON string — router (seam vision) yg konversi ke format provider.
+		content := m.Content
+		if role == "user" && len(m.Images) > 0 {
+			content = visionContent(m.Content, m.Images)
+		}
+		messages = append(messages, map[string]any{"role": role, "content": content})
 	}
 	buildTool := map[string]any{
 		"type": "function",

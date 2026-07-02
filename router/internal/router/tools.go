@@ -228,6 +228,13 @@ type openAIToolCall struct {
 	} `json:"function"`
 }
 
+// anthropicUserContentHook — ⭐ SEAM (Rule 7 POLA B, owner-approved 2026-07-02): bentuk
+// content USER string → block-array Anthropic (mis. vision: text + image base64) TANPA
+// buka file frozen ini. Default nil → string apa adanya (perilaku lama). Diisi sibling
+// non-frozen (vision_anthropic_ext.go); sibling dihapus → balik default aman.
+// 📄 Dok: FLowork_os/lock/chat-vision.md
+var anthropicUserContentHook func(content string) any
+
 func buildAnthropicToolBody(req OpenAIRequest) ([]byte, error) {
 	body := map[string]any{
 		"model":      normalizeClaudeModel(req.Model),
@@ -291,7 +298,13 @@ func buildAnthropicToolBody(req OpenAIRequest) ([]byte, error) {
 			}
 			messages = append(messages, map[string]any{"role": "assistant", "content": m.Content})
 		case "user":
-			messages = append(messages, map[string]any{"role": "user", "content": m.Content})
+			content := any(m.Content)
+			if anthropicUserContentHook != nil {
+				if v := anthropicUserContentHook(m.Content); v != nil {
+					content = v
+				}
+			}
+			messages = append(messages, map[string]any{"role": "user", "content": content})
 		}
 	}
 	cacheOn := promptCacheEnabled()

@@ -16,6 +16,8 @@
 
 package floworkdb
 
+import "encoding/json"
+
 // ChatSession — one persisted conversation.
 type ChatSession struct {
 	ID        string `json:"id"`
@@ -29,11 +31,12 @@ type ChatSession struct {
 
 // ChatMessage — one turn in a session.
 type ChatMessage struct {
-	ID        int64  `json:"id"`
-	SessionID string `json:"session_id"`
-	Role      string `json:"role"` // "user" | "assistant"
-	Content   string `json:"content"`
-	CreatedAt string `json:"created_at"`
+	ID        int64    `json:"id"`
+	SessionID string   `json:"session_id"`
+	Role      string   `json:"role"` // "user" | "assistant"
+	Content   string   `json:"content"`
+	Images    []string `json:"images,omitempty"` // lampiran gambar (data URL base64), kolom images
+	CreatedAt string   `json:"created_at"`
 }
 
 // EnsureChatSchema — create the chat tables (idempotent). Called at boot.
@@ -58,8 +61,14 @@ func (s *Store) EnsureChatSchema() error {
 	)`); err != nil {
 		return err
 	}
-	_, err := s.db.Exec(`CREATE INDEX IF NOT EXISTS idx_chat_message_session ON chat_message(session_id, id)`)
-	return err
+	if _, err := s.db.Exec(`CREATE INDEX IF NOT EXISTS idx_chat_message_session ON chat_message(session_id, id)`); err != nil {
+		return err
+	}
+	// Multimodal (2026-07-02): kolom lampiran gambar — ADDITIVE (HUKUM MUTLAK push:
+	// cuma nambah). SQLite ga punya ADD COLUMN IF NOT EXISTS → error "duplicate
+	// column" pas kolom udah ada itu NORMAL, diabaikan.
+	_, _ = s.db.Exec(`ALTER TABLE chat_message ADD COLUMN images TEXT NOT NULL DEFAULT ''`)
+	return nil
 }
 
 // CreateChatSession — insert a new session (caller supplies the id). Blank fields
@@ -142,9 +151,41 @@ func (s *Store) AddChatMessage(sessionID, role, content string) (int64, error) {
 	return res.LastInsertId()
 }
 
+// AddChatMessageImages — append a turn WITH image attachments (data URLs; stored as a
+// JSON array in the images column) and bump the session's updated_at.
+func (s *Store) AddChatMessageImages(sessionID, role, content string, images []string) (int64, error) {
+	if len(images) == 0 {
+		return s.AddChatMessage(sessionID, role, content)
+	}
+	b, err := json.Marshal(images)
+	if err != nil {
+		return 0, err
+	}
+	res, err := s.db.Exec(
+		`INSERT INTO chat_message(session_id,role,content,images) VALUES(?,?,?,?)`,
+		sessionID, role, content, string(b))
+	if err != nil {
+		return 0, err
+	}
+	_, _ = s.db.Exec(`UPDATE chat_session SET updated_at=datetime('now') WHERE id=?`, sessionID)
+	return res.LastInsertId()
+}
+
+// decodeChatImages — kolom images (JSON array / kosong) → []string. Rusak → nil (robust).
+func decodeChatImages(raw string) []string {
+	if raw == "" {
+		return nil
+	}
+	var imgs []string
+	if json.Unmarshal([]byte(raw), &imgs) != nil {
+		return nil
+	}
+	return imgs
+}
+
 // ListChatMessages — a session's turns oldest-first. limit<=0 → all.
 func (s *Store) ListChatMessages(sessionID string, limit int) ([]ChatMessage, error) {
-	q := `SELECT id,session_id,role,content,created_at FROM chat_message WHERE session_id=? ORDER BY id ASC`
+	q := `SELECT id,session_id,role,content,COALESCE(images,''),created_at FROM chat_message WHERE session_id=? ORDER BY id ASC`
 	args := []any{sessionID}
 	if limit > 0 {
 		q += ` LIMIT ?`
@@ -158,9 +199,11 @@ func (s *Store) ListChatMessages(sessionID string, limit int) ([]ChatMessage, er
 	out := []ChatMessage{}
 	for rows.Next() {
 		var m ChatMessage
-		if err := rows.Scan(&m.ID, &m.SessionID, &m.Role, &m.Content, &m.CreatedAt); err != nil {
+		var imgs string
+		if err := rows.Scan(&m.ID, &m.SessionID, &m.Role, &m.Content, &imgs, &m.CreatedAt); err != nil {
 			return nil, err
 		}
+		m.Images = decodeChatImages(imgs)
 		out = append(out, m)
 	}
 	return out, rows.Err()
@@ -173,7 +216,7 @@ func (s *Store) RecentChatMessages(sessionID string, n int) ([]ChatMessage, erro
 		n = 12
 	}
 	rows, err := s.db.Query(
-		`SELECT id,session_id,role,content,created_at FROM chat_message WHERE session_id=? ORDER BY id DESC LIMIT ?`,
+		`SELECT id,session_id,role,content,COALESCE(images,''),created_at FROM chat_message WHERE session_id=? ORDER BY id DESC LIMIT ?`,
 		sessionID, n)
 	if err != nil {
 		return nil, err
@@ -182,9 +225,11 @@ func (s *Store) RecentChatMessages(sessionID string, n int) ([]ChatMessage, erro
 	tmp := []ChatMessage{}
 	for rows.Next() {
 		var m ChatMessage
-		if err := rows.Scan(&m.ID, &m.SessionID, &m.Role, &m.Content, &m.CreatedAt); err != nil {
+		var imgs string
+		if err := rows.Scan(&m.ID, &m.SessionID, &m.Role, &m.Content, &imgs, &m.CreatedAt); err != nil {
 			return nil, err
 		}
+		m.Images = decodeChatImages(imgs)
 		tmp = append(tmp, m)
 	}
 	if err := rows.Err(); err != nil {

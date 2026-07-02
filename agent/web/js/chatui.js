@@ -5,6 +5,9 @@
 //   ada di agent" — model dipilih PER-AGENT (ai-studio buat architect, model group buat group) lewat
 //   Settings agent, bukan dropdown global di chat. barValues kirim model:'' → backend pakai model
 //   per-target. RE-LOCKED.
+// 2026-07-02 (roadmap owner, multimodal paste): Ctrl+V screenshot → chip preview →
+//   kirim images[] (data URL base64) ke /api/chat/send → LLM vision. Render thumbnail
+//   di bubble user + history. 📄 Dok: FLowork_os/lock/chat-vision.md
 //
 // chatui.js — SHARED ChatGPT-style chat component, reused by the Group, Schedule and
 // Trigger tabs. Self-contained: own CSS (cu-* classes, no collision), own i18n
@@ -53,7 +56,16 @@ const CSS = `
 .cu-target { flex:1; min-width:180px; }
 .cu-log { flex:1; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:14px; }
 .cu-empty { color:#64748b; font-size:0.86rem; padding:10px 0; }
+.cu-attach { display:none; gap:8px; padding:10px 14px 0; flex-wrap:wrap; border-top:1px solid rgba(148,163,184,0.16); }
+.cu-attach.has { display:flex; }
+.cu-chip { position:relative; width:56px; height:56px; border-radius:9px; overflow:hidden; border:1px solid var(--glass-border-hover); box-shadow:0 4px 10px rgba(0,0,0,.3); }
+.cu-chip img { width:100%; height:100%; object-fit:cover; display:block; }
+.cu-chip button { position:absolute; top:1px; right:1px; width:18px; height:18px; line-height:1; padding:0; border:none; border-radius:50%;
+  background:rgba(2,6,18,.75); color:#e2e8f0; font-size:0.7rem; cursor:pointer; }
+.cu-chip button:hover { background:#ef4444; }
+.cu-bubble .cu-img { max-width:230px; max-height:180px; border-radius:9px; display:block; margin-top:6px; border:1px solid rgba(255,255,255,.25); }
 .cu-input-row { display:flex; gap:10px; padding:12px 14px; border-top:1px solid rgba(148,163,184,0.16); }
+.cu-attach.has + .cu-input-row { border-top:none; }
 .cu-input { flex:1; resize:none; box-sizing:border-box; background:rgba(2,6,18,0.55); border:1px solid rgba(148,163,184,0.2);
   border-radius:9px; color:#e2e8f0; padding:9px 12px; font:inherit; font-size:0.9rem; }
 .cu-input:focus { outline:none; border-color:#a78bfa; }
@@ -138,6 +150,7 @@ export function renderChatUI(host) {
           <select class="cu-sel cu-target"></select>
         </div>
         <div class="cu-log"><div class="cu-empty cu-intro">${esc(L.pick)}</div></div>
+        <div class="cu-attach"></div>
         <div class="cu-input-row">
           <textarea class="cu-input" rows="2" placeholder="${escAttr(L.input_ph)}"></textarea>
           <button class="cu-send">${esc(L.send)}</button>
@@ -145,7 +158,32 @@ export function renderChatUI(host) {
       </section>
     </div>`;
 
+  S.pendingImages = []; // lampiran gambar (data URL) yang nunggu dikirim (multimodal paste)
   const $ = (sel) => host.querySelector(sel);
+  const CU_MAX_IMG = 4;
+  // userHTML — bubble user: teks (escaped) + thumbnail lampiran (data URL aman di-embed).
+  const userHTML = (text, imgs) => esc(text || '')
+    + ((imgs || []).map((u) => `<img class="cu-img" src="${escAttr(u)}" alt="lampiran">`).join(''));
+  function renderAttach() {
+    const row = $('.cu-attach'); row.innerHTML = '';
+    row.classList.toggle('has', S.pendingImages.length > 0);
+    S.pendingImages.forEach((u, i) => {
+      const chip = document.createElement('div'); chip.className = 'cu-chip';
+      const img = document.createElement('img'); img.src = u; chip.appendChild(img);
+      const x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.title = 'hapus';
+      x.addEventListener('click', () => { S.pendingImages.splice(i, 1); renderAttach(); });
+      chip.appendChild(x); row.appendChild(chip);
+    });
+  }
+  function addImageFiles(files) {
+    for (const f of files) {
+      if (!f.type || !f.type.startsWith('image/')) continue;
+      if (S.pendingImages.length >= CU_MAX_IMG) { alert(`Maks ${CU_MAX_IMG} gambar per pesan`); return; }
+      const rd = new FileReader();
+      rd.onload = () => { S.pendingImages.push(String(rd.result)); renderAttach(); };
+      rd.readAsDataURL(f);
+    }
+  }
   const barValues = () => {
     const target = $('.cu-target').value;
     // model dropdown DIHAPUS (owner 2026-06-21: "model sudah ada di agent") → model:'' = backend
@@ -207,20 +245,23 @@ export function renderChatUI(host) {
         const intro = sess && sess.mode === 'group' ? L.intro_group : L.intro_architect;
         log.innerHTML = `<div class="cu-empty cu-intro">${esc(intro)}</div>`;
       } else {
-        for (const m of msgs) bubble(m.role === 'user' ? 'me' : 'them', m.role === 'user' ? esc(m.content) : mdLite(m.content));
+        for (const m of msgs) bubble(m.role === 'user' ? 'me' : 'them', m.role === 'user' ? userHTML(m.content, m.images) : mdLite(m.content));
       }
     } catch (e) { log.innerHTML = `<div class="cu-empty">${esc(String(e.message || e))}</div>`; }
     await loadSessions();
   }
   async function send() {
     if (!S.sessionId) { await newChat(); if (!S.sessionId) return; }
-    const input = $('.cu-input'); const text = input.value.trim(); if (!text) return;
+    const input = $('.cu-input'); const text = input.value.trim();
+    const images = S.pendingImages.slice();
+    if (!text && !images.length) return;
     input.value = '';
-    bubble('me', esc(text));
+    S.pendingImages = []; renderAttach();
+    bubble('me', userHTML(text, images));
     const btn = $('.cu-send'); btn.disabled = true; input.disabled = true;
     const pending = bubble('them pending', `<span class="cu-typing"><span></span><span></span><span></span></span>`);
     try {
-      const r = await fetchJSON('/api/chat/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: S.sessionId, text }) });
+      const r = await fetchJSON('/api/chat/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: S.sessionId, text, images }) });
       pending.classList.remove('pending');
       typeReveal(pending, r.reply || r.error || '(no reply)');
       loadSessions();
@@ -260,6 +301,15 @@ export function renderChatUI(host) {
   $('.cu-target').addEventListener('change', saveMeta);
   $('.cu-send').addEventListener('click', send);
   $('.cu-input').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
+  // Multimodal paste: Ctrl+V screenshot/gambar dari clipboard → chip preview → ikut kekirim.
+  $('.cu-input').addEventListener('paste', (e) => {
+    const items = (e.clipboardData && e.clipboardData.items) || [];
+    const files = [];
+    for (const it of items) {
+      if (it.kind === 'file') { const f = it.getAsFile(); if (f && f.type && f.type.startsWith('image/')) files.push(f); }
+    }
+    if (files.length) { e.preventDefault(); addImageFiles(files); }
+  });
   loadGroups();
   loadSessions();
 

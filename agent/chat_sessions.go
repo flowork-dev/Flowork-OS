@@ -13,7 +13,8 @@
 //	POST /api/chat/sessions/delete?id=
 //	POST /api/chat/sessions/meta?id=     → {mode?,target_id,model}  (switch target/model)
 //	GET  /api/chat/sessions/messages?id= → full message list
-//	POST /api/chat/send                  → {session_id,text} → reply (and persist both turns)
+//	POST /api/chat/send                  → {session_id,text,images?} → reply (and persist both turns)
+//	                                       images = data URL base64 (multimodal paste, chat_vision.go)
 package main
 
 import (
@@ -167,7 +168,14 @@ func buildGroupTranscript(history []floworkdb.ChatMessage) string {
 	if len(history) == 0 {
 		return ""
 	}
-	last := history[len(history)-1].Content
+	// Jalur GROUP text-only: lampiran gambar ditandai teks (vision penuh = jalur architect).
+	imgNote := func(m floworkdb.ChatMessage) string {
+		if len(m.Images) == 0 {
+			return ""
+		}
+		return " [📷 user melampirkan gambar — jalur tim belum dukung vision]"
+	}
+	last := history[len(history)-1].Content + imgNote(history[len(history)-1])
 	if len(history) == 1 {
 		return last
 	}
@@ -181,6 +189,7 @@ func buildGroupTranscript(history []floworkdb.ChatMessage) string {
 		b.WriteString(who)
 		b.WriteString(": ")
 		b.WriteString(m.Content)
+		b.WriteString(imgNote(m))
 		b.WriteString("\n")
 	}
 	b.WriteString("\nPertanyaan/permintaan terbaru User: ")
@@ -197,16 +206,23 @@ func chatSendHandler(host *kernelhost.Host, store *floworkdb.Store, groups *grou
 			return
 		}
 		var body struct {
-			SessionID string `json:"session_id"`
-			Text      string `json:"text"`
+			SessionID string   `json:"session_id"`
+			Text      string   `json:"text"`
+			Images    []string `json:"images"` // data URL base64 (multimodal paste)
 		}
-		if err := json.NewDecoder(io.LimitReader(r.Body, 1<<18)).Decode(&body); err != nil {
+		// 16MB: gambar base64 gede (limit per-gambar/total di validChatImages).
+		if err := json.NewDecoder(io.LimitReader(r.Body, 1<<24)).Decode(&body); err != nil {
 			tfWriteJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid body"})
 			return
 		}
 		text := strings.TrimSpace(body.Text)
-		if body.SessionID == "" || text == "" {
-			tfWriteJSON(w, http.StatusBadRequest, map[string]any{"error": "session_id + text required"})
+		images, ierr := validChatImages(body.Images)
+		if ierr != nil {
+			tfWriteJSON(w, http.StatusBadRequest, map[string]any{"error": ierr.Error()})
+			return
+		}
+		if body.SessionID == "" || (text == "" && len(images) == 0) {
+			tfWriteJSON(w, http.StatusBadRequest, map[string]any{"error": "session_id + text (atau gambar) required"})
 			return
 		}
 		sess, err := store.GetChatSession(body.SessionID)
@@ -214,14 +230,18 @@ func chatSendHandler(host *kernelhost.Host, store *floworkdb.Store, groups *grou
 			tfWriteJSON(w, http.StatusNotFound, map[string]any{"error": "session not found"})
 			return
 		}
-		// Persist the user turn first.
-		if _, err := store.AddChatMessage(sess.ID, "user", text); err != nil {
+		// Persist the user turn first (images ikut kesimpan → history vision utuh).
+		if _, err := store.AddChatMessageImages(sess.ID, "user", text, images); err != nil {
 			tfWriteJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 			return
 		}
 		// Auto-title from the first user message.
 		if strings.TrimSpace(sess.Title) == "" || sess.Title == "New chat" {
-			_ = store.RenameChatSession(sess.ID, snippetTitle(text))
+			title := snippetTitle(text)
+			if text == "" {
+				title = "📷 Gambar"
+			}
+			_ = store.RenameChatSession(sess.ID, title)
 		}
 		history, err := store.ListChatMessages(sess.ID, 0)
 		if err != nil {

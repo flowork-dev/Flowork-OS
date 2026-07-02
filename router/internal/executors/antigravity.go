@@ -28,6 +28,14 @@ func init() { Register(&antigravityExecutor{}) }
 // 📄 Dok: FLowork_os/lock/antigravity.md
 var AntigravityHeaderHook func(base map[string]string, p *store.ProviderConnection) map[string]string
 
+// AntigravityPartsHook — ⭐ SEAM (Rule 7 POLA B, owner-approved 2026-07-02): bentuk
+// parts Gemini dari 1 message (mis. decode content-block JSON string → text +
+// inlineData vision) TANPA buka file frozen ini. Default nil / balik kosong →
+// text-only (perilaku lama). Diisi sibling non-frozen (antigravity_vision_ext.go);
+// sibling dihapus → balik default aman.
+// 📄 Dok: FLowork_os/lock/chat-vision.md
+var AntigravityPartsHook func(m Message) []map[string]any
+
 type antigravityExecutor struct{}
 
 func (a *antigravityExecutor) Name() string { return "antigravity" }
@@ -73,7 +81,13 @@ func (a *antigravityExecutor) headers(p *store.ProviderConnection, stream bool) 
 func (a *antigravityExecutor) body(ctx context.Context, p *store.ProviderConnection, req Request) []byte {
 	contents := make([]map[string]any, len(req.Messages))
 	for i, m := range req.Messages {
-		contents[i] = map[string]any{"role": m.Role, "parts": []map[string]any{{"text": m.Content}}}
+		parts := []map[string]any{{"text": m.Content}}
+		if AntigravityPartsHook != nil {
+			if alt := AntigravityPartsHook(m); len(alt) > 0 {
+				parts = alt
+			}
+		}
+		contents[i] = map[string]any{"role": m.Role, "parts": parts}
 	}
 	project := ProviderString(p, "projectId")
 	if useReal, _ := p.Data["useRealProjectId"].(bool); useReal {

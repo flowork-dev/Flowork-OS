@@ -27,8 +27,8 @@ func ctxBudgetTokens(model string) int {
 	m := strings.ToLower(strings.TrimSpace(model))
 	switch {
 	case strings.Contains(m, "opus"), strings.Contains(m, "sonnet"), strings.Contains(m, "haiku"),
-		strings.Contains(m, "claude"):
-		return 180000 // Claude ~200k, sisain buffer output
+		strings.Contains(m, "claude"), strings.Contains(m, "gemini"):
+		return 180000 // Claude ~200k / Gemini ≥1M — konservatif, sisain buffer output
 	case strings.Contains(m, "flowork-brain"), strings.Contains(m, "local"), strings.Contains(m, "gemma"),
 		strings.Contains(m, "qwen"), strings.Contains(m, "llama"):
 		return 7000 // model lokal kecil — konservatif
@@ -52,7 +52,9 @@ func estTokens(messages []map[string]any) int {
 func msgContentLen(m map[string]any) int {
 	switch c := m["content"].(type) {
 	case string:
-		return len(c)
+		// Vision block-array (multimodal paste): hitung teks + flat per-gambar, BUKAN
+		// panjang base64 mentah — biar ga salah anggep kegedean (chat_vision.go).
+		return chatContentEstLen(c)
 	case []any:
 		n := 0
 		for _, p := range c {
@@ -133,12 +135,14 @@ func compactMessages(messages []map[string]any, budget int) ([]map[string]any, b
 		if cut > blen-100 {
 			cut = blen - 100
 		}
-		if s, ok := messages[bi]["content"].(string); ok {
+		if s, ok := messages[bi]["content"].(string); ok && !isVisionBlockContent(s) {
 			messages[bi] = cloneMsg(messages[bi])
 			messages[bi]["content"] = s[:len(s)-cut] + marker
 			changed = true
 		} else {
-			break // content non-string (array) — jangan rusak, serahkan ke caller
+			// content non-string (array) ATAU block vision (JSON/base64) — motong =
+			// korup. Jangan rusak, serahkan ke caller (fail-safe).
+			break
 		}
 	}
 	return messages, changed
