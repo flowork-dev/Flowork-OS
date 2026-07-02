@@ -17,12 +17,13 @@ import "log"
 
 // DNAResult — ringkasan apa yang baru ke-seed (0 = udah ada, idempotent).
 type DNAResult struct {
-	EduErrors    int
-	Constitution int
-	Antibodies   int
-	GraphNodes   int
-	GraphEdges   int
-	Synced       bool
+	EduErrors     int
+	Constitution  int
+	Antibodies    int
+	SelfKnowledge int
+	GraphNodes    int
+	GraphEdges    int
+	Synced        bool
 }
 
 // ProvisionAgentDNA seed DNA intrinsik ke satu agent (idempotent, aman dipanggil
@@ -62,6 +63,12 @@ func ProvisionAgentDNA(agentID string) DNAResult {
 	if n, e := store.SeedAntibodies(); e == nil {
 		res.Antibodies = n
 	}
+	// Self-knowledge: kartu FITUR/SUBSISTEM Flowork (distilasi lock/*.md) → brain lokal
+	// tiap agent, biar TAHU kemampuan dirinya (recall via brain_search, bukan ngarang).
+	// DNA statik (sekelas konstitusi/antibody), idempotent: no-op kalau room udah keisi.
+	if n, e := store.SeedSelfKnowledge(); e == nil {
+		res.SelfKnowledge = n
+	}
 	// owner 2026-06-23 "GUI = KEBENARAN UTAMA, hardcode HARAM": tool default primary (browser/task/
 	// sleep-wait/brain-extra) DULU hardcode-force di ToolSpecsHandler — sekarang DI-SEED jadi subscription
 	// (SEKALI, sentinel-flag) → owner curate/uncheck per-agent di GUI Tools-catalog. brain_add ditambah
@@ -81,9 +88,9 @@ func ProvisionAgentDNA(agentID string) DNAResult {
 	// ga nunggu operasi cognitive pertama.
 	res.GraphNodes, res.GraphEdges = store.CountCognitiveGraph()
 
-	if res.EduErrors+res.Constitution+res.Antibodies > 0 || res.Synced {
-		log.Printf("provision-dna %s: edu=%d constitution=%d antibody=%d synced=%v graph=%d/%d",
-			agentID, res.EduErrors, res.Constitution, res.Antibodies, res.Synced, res.GraphNodes, res.GraphEdges)
+	if res.EduErrors+res.Constitution+res.Antibodies+res.SelfKnowledge > 0 || res.Synced {
+		log.Printf("provision-dna %s: edu=%d constitution=%d antibody=%d selfknowledge=%d synced=%v graph=%d/%d",
+			agentID, res.EduErrors, res.Constitution, res.Antibodies, res.SelfKnowledge, res.Synced, res.GraphNodes, res.GraphEdges)
 	}
 	return res
 }

@@ -1,0 +1,292 @@
+{
+ "cards": [
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — ARSITEKTUR FLOWORK — Abadi, Evolusi-able, Anti-Tamper. Master doc arsitektur. Detail per-subsistem: lock/{frozen-core,fwswitch,integrity,mesh}.md + lock/gui/*. (Arsitektur lengkap: lock/ARSITEKTUR.md)",
+   "source": "ARSITEKTUR.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — COGNITIVE GRAPH (CGM) — Twin Graph per-Agent: Cara Kerja, Kontradiksi, Tools & Switch. Dokumen referensi (white-label). Menjelaskan SEMUA soal Cognitive Graph: cara kerja, model node/edge, masalah orphan + fix limit, kontradiksi (tension) + loop klarifikasi, tools, (Arsitektur lengkap: lock/CognitiveGraph.md)",
+   "source": "CognitiveGraph.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — ERROR-EDUKASI — Cara Flowork Belajar dari Kesalahan (Guard, Recovery, Anti-Poison). Prinsip owner: \"tiap kesalahan ada pembelajaran\" + \"deterministik = kuat, LLM lemah = rapuh\". → karena model lokal (~26B) lemah, guard-rail harus DETERMINISTIK di HARNESS, jangan ngarep model nyadar sendiri. (Arsitektur lengkap: lock/ERROR_EDUKASI.md)",
+   "source": "ERROR_EDUKASI.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — FLOWORK INSTINCTS — Cara Kerja, Kondisi Sekarang & Roadmap Koloni. Tiap step format SAMA: Tujuan · Langkah · SELESAI-kalau (uji konkret) · Status. Dikerjain BERURUTAN. (Arsitektur lengkap: lock/FLoworkInstincts.md)",
+   "source": "FLoworkInstincts.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — AI AGENT — ENGINE beku, AGENT editable (owner: agent masih halu). Dev: Aola Sahidin. 2026-06-26. Keputusan owner: freeze ENGINE doang, AGENT-nya JANGAN — \"agent belum terbukti work masih halu jadi engine-nya saja\". Agent (yang BERPIKIR) belum stabil → harus tetap bisa diperbaiki/evolve. Engine (mesin yang MENJALANKAN) udah proven → beku. (Arsitektur lengkap: lock/agent-engine.md)",
+   "source": "agent-engine.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — AGENTKIT — Kit Bersama \"Pasukan Semut\" (loop tool-calling + guard ter-ekstrak). Dokumen kanonik (white-label). Keystone roadmap koloni: hapus duplikasi loop worker (Arsitektur lengkap: lock/agentkit.md)",
+   "source": "agentkit.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — 🏭 AI STUDIO — Pabrik Kemampuan + Gerbang Pemeriksaan (rangkuman fase). Master rencana: ROADMAP_AI_STUDIO.md. Arsitektur inti: lock/ARSITEKTUR.md. Adopt: lock/apps-adopt.md. (Arsitektur lengkap: lock/ai-studio.md)",
+   "source": "ai-studio.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — Antigravity provider (plug-and-play) — 2026-07-02. Fitur gantung pihak-ke-3 = COLOKAN. Google matiin Antigravity → hapus sibling, (Arsitektur lengkap: lock/antigravity.md)",
+   "source": "antigravity.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — Gerbang approval interaktif — F-B v1 (2026-07-02). Mesin approval udah ada dari dulu di frozen core (JANGAN bikin ulang): (Arsitektur lengkap: lock/approval-gate.md)",
+   "source": "approval-gate.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — 🌉 APPS-ADOPT — Jembatan \"Repo → App\" (Sidecar). Arsitektur fitur adopt: repo mentah (git-URL / folder) → app yang dijalanin MANUSIA (GUI) & AI (tool), (Arsitektur lengkap: lock/apps-adopt.md)",
+   "source": "apps-adopt.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — BRAIN — PETA FILE & KEPUTUSAN TEKNOLOGI (pecahan `lock/brain.md`). Bagian arsitektur memori Flowork. Overview + index: lock/brain.md. Topik file ini: peta file lengkap (file→peran) · keputusan teknologi (kenapa). (Arsitektur lengkap: lock/brain-files.md)",
+   "source": "brain-files.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — BRAIN — RECALL & INGESTION (pecahan `lock/brain.md`). Bagian arsitektur memori Flowork. Overview + index: lock/brain.md. Topik file ini: embedding · recall 3-lapis · ingestion ke graph · auto-recall + router-inject · GUI · alur e2e. (Arsitektur lengkap: lock/brain-recall.md)",
+   "source": "brain-recall.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — BRAIN — SKILL SUBSYSTEM (pecahan `lock/brain.md`). Bagian arsitektur memori Flowork. Overview + index: lock/brain.md. Topik file ini: 2 sistem skill (router :2402) + registry komunitas. (Arsitektur lengkap: lock/brain-skill.md)",
+   "source": "brain-skill.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — BRAIN — Arsitektur Memori Flowork: Subsistem & Cara Terhubung. Dokumen referensi (white-label). Menjelaskan SEMUA subsistem memori, file penghubung, (Arsitektur lengkap: lock/brain.md)",
+   "source": "brain.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — 🌐 BROWSER — STABLE & LOCKED (jangan diutak-atik, owner 2026-06-28). Browser udah BERES & STABIL → di-LOCK semua biar selalu normal. JANGAN edit tanpa unfreeze sadar owner. (Arsitektur lengkap: lock/browser-stable.md)",
+   "source": "browser-stable.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — BROWSER-CONTROL — Tool Browser Native (Go, no node): Cara Kerja, Tool, Cookie & Cabang. Dokumen referensi (white-label). Menjelaskan SEMUA soal browser-control: cara kerja, daftar tool, cookie-inject, lifecycle/keamanan, env, titik-extension (cabang), freeze. (Arsitektur lengkap: lock/browser.md)",
+   "source": "browser.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — CGM SELF-AWARE — codemap → graph + orphan backfill (agent Cognitive Graph). Tujuan: agent SADAR peta kode-dirinya + graph nyambung penuh (no node ngambang). (Arsitektur lengkap: lock/cgm-selfaware.md)",
+   "source": "cgm-selfaware.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — 👁️ CHAT VISION — multimodal paste (Ctrl+V screenshot → LLM vision). history multi-turn ✓, GUI render ✓). Feature files NON-FROZEN (deletable). (Arsitektur lengkap: lock/chat-vision.md)",
+   "source": "chat-vision.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — CODE PROGRESS — activity/audit log viewer (GUI tab \"Code Progress\"). Dev: Aola Sahidin. 2026-06-26. Tab nampilin stream aktivitas agent (tool_call, protector_block, scanner_finding, dst) gaya \"commit history\" — BUKAN git log, tapi event dari audit_log. Cara kerja: os/. (Arsitektur lengkap: lock/code-progress.md)",
+   "source": "code-progress.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — CODEMAP ENRICH — self-map semantik + incremental by-hash (M1). Tiap file source → analisa LLM kecil → {summary, domain, role} disimpan di tabel codemap_semantic (Arsitektur lengkap: lock/codemap-enrich.md)",
+   "source": "codemap-enrich.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — CODEMAP — peta kode self-aware (GUI Codemap). Dev: Aola Sahidin. 2026-06-26. Agent sadar struktur kode-dirinya: file + import + layer + makna (enrich) → di-viz + masuk Cognitive Graph. Cara kerja mesin: os/. (Arsitektur lengkap: lock/codemap.md)",
+   "source": "codemap.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — COMPACT — digest interaksi → GRAPH via agent dedikasi (dream-digester). Agent yg interaksi non-deleted > max_interactions (default 400) → DIGEST interaksi pending ke (Arsitektur lengkap: lock/compact.md)",
+   "source": "compact.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — connect-prune — rapihin daftar Connect Provider / OAuth Imports / CLI Tools. Owner cuma mau lihat yang proven (kepasang/ke-login), sembunyiin CLI/preset yang (Arsitektur lengkap: lock/connect-prune.md)",
+   "source": "connect-prune.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — CONNECTIONS — channel / MCP / native connector (GUI 🔌 Connections). Dev: Aola Sahidin. 2026-06-26. Pintu masuk/keluar Flowork: channel (Telegram/Discord/Slack/WA via WASM connector), MCP server (tool eksternal), native built-in (CLI/MCP). Cara kerja: os/. (Arsitektur lengkap: lock/connections.md)",
+   "source": "connections.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — DREAMGRAPH (router Knowledge Graph) — auto-populate + auto-update. Router cognitive graph yang tampil di dashboard :2402 tab Brain → \"FLowork Knowledge Graph (Arsitektur lengkap: lock/dreamgraph.md)",
+   "source": "dreamgraph.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — EDITION LOCK (#2) — FREE (anti-rebrand) vs CORPORATE (white-label). konstitusi AOLA) DIKUNCI biar ga ada yg rebrand+jual-ulang. CORPORATE (berbayar) = unlock white-label. (Arsitektur lengkap: lock/edition-lock.md)",
+   "source": "edition-lock.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — File checkpointing + undo (F-G #1) — 2026-07-02. Jaring pengaman evolusi mandiri: agent boleh salah/typo/error — tiap file_write/edit (Arsitektur lengkap: lock/file-checkpoint.md)",
+   "source": "file-checkpoint.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — FROZEN CORE — mass-freeze 2026-06-26 (LOCK → FREEZE). dulu cuma ber-header // === LOCKED FILE === (soft-lock, gak ke-enforce) sekarang FREEZE beneran = 2-lapis: hash di KERNEL_FREEZE.md (di-cek TestKernelFreeze) + chattr +i (immutable OS). Tujuan: Flowork TAHAN BANTING dari AI eksternal & internal — boleh evolusi, tapi hasil evolusi GAK BISA robohin yang udah jalan. (Arsitektur lengkap: lock/frozen-core.md)",
+   "source": "frozen-core.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — FWSWITCH — Plug-and-Play Settings (switch fitur dari GUI, bukan env edit-tangan). ~80 ENV FLOWORK_*. Switch FITUR (perilaku) kebawa di router/flowork.local.env — file (Arsitektur lengkap: lock/fwswitch.md)",
+   "source": "fwswitch.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — GROUP — Arsitektur Squad/Koloni Flowork: Cara Kerja, Filtur & Cara Bikin. Dokumen referensi (white-label). Menjelaskan SEMUA soal GROUP/SQUAD: cara kerja, filtur, cara bikin, file penghubung, titik-extension (cabang), dan daftar file FREEZE. (Arsitektur lengkap: lock/group.md)",
+   "source": "group.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — Integrity — Anti-Tamper Mesh (2-tier, root-hash, anchor). Switch: FLOWORK_INTEGRITY_GATE (default ON). Lihat juga: lock/mesh-sharing.md. (Arsitektur lengkap: lock/integrity.md)",
+   "source": "integrity.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — INTENT-GATED TOOLS (#9) — prune tool-schema ke yg relevan (hemat token). Diagnosis: ~15.8k token/turn, biang #1 = tool-schema statis ~55% prompt. Tiap request kirim (Arsitektur lengkap: lock/intent-gated-tools.md)",
+   "source": "intent-gated-tools.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — KV-CACHE — Keystone #3 (token/compute-efisiensi koloni). Token-efisiensi = syarat hidup koloni (1000 semut). Lapis STATIK prompt IDENTIK lintas-call → llama.cpp simpen KV-cache prefix & pakai ulang → prefill di-SKIP → tiap call cuma proses bagian dinamis. (Arsitektur lengkap: lock/kv-cache.md)",
+   "source": "kv-cache.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — lines-changed — metrik \"cost\" baris-diubah per-sesi. Lacak baris ditambah/dihapus (added/removed) tiap agent ngedit file → kartu (Arsitektur lengkap: lock/lines-changed.md)",
+   "source": "lines-changed.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — 📋 LIST FILTUR — Katalog Tool, Slash & Loop (Flowork). Referensi buat AI: nama tool · cara panggil · fungsi. Auto-derived dari registry (agent/internal/tools/builtins/* via tools.List()), JANGAN edit tangan — regen kalau tool berubah. (Arsitektur lengkap: lock/list_filtur.md)",
+   "source": "list_filtur.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — LLM call timeout + env-forward guest (2026-07-02). LLM lokal + tugas berat → router error: host: fetch: Post \":2402/v1/chat/completions\": (Arsitektur lengkap: lock/llm-timeout.md)",
+   "source": "llm-timeout.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — LOCALAI RUNTIME — model lokal flowork-brain (GUI Mesh & Policy · Section 25). Dev: Aola Sahidin. 2026-06-26. Mesin LLM lokal berdaulat: flowork-brain.gguf jalan di llama.cpp (llama-server :8088). Cara kerja: os/. (Arsitektur lengkap: lock/localai-runtime.md)",
+   "source": "localai-runtime.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — lsp-code — kecerdasan kode SEMANTIK via Language Server (gopls). Tool lsp: query semantik presisi ke language server (gopls, Go) — \"level berikutnya\" (Arsitektur lengkap: lock/lsp-code.md)",
+   "source": "lsp-code.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — MEM_TYPE DROPDOWN — satu sumber kanonik (GUI=truth). Dua dropdown mem_type (\"Add Knowledge\" + \"Typed Memory\") di-hardcode TERPISAH & beda isi (12 vs 7) → (Arsitektur lengkap: lock/memtype-dropdown.md)",
+   "source": "memtype-dropdown.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — 🔒 MESH LOCKBOX — FASE M/B (owner-gated, verified live 2026-07-02). wall mesh↔evolusi HARD (default aktif), tool manifest consent gate ON. (Arsitektur lengkap: lock/mesh-lockbox.md)",
+   "source": "mesh-lockbox.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — Mesh Sharing — share on/off + approve manual/auto + 2-tier security. - Tingkat 1 — FREEZE (anti-edit): chattr +i + hash KERNEL_FREEZE.md (enforce TestKernelFreeze). (Arsitektur lengkap: lock/mesh-sharing.md)",
+   "source": "mesh-sharing.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — MESH — jaringan P2P antar-node (GUI 🕸️ Mesh & Policy). Dev: Aola Sahidin. 2026-06-26. Mesh = node Flowork saling kenal & tukar pengetahuan/tool TANPA server pusat (mDNS + rendezvous, paket bertanda-tangan ed25519, filter 9-lapis). PHASE-1 (skema + seed lokal single-owner; traffic multi-host real = phase-2). Cara kerja: os/. (Arsitektur lengkap: lock/mesh.md)",
+   "source": "mesh.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — Model deprecation auto-remap + warning (F-G) — 2026-07-02. Config/alias yang nunjuk model id PENSIUN (mis. claude-2.1, claude-3-opus, (Arsitektur lengkap: lock/model-deprecat.md)",
+   "source": "model-deprecat.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — MODEL SWAP (#1) — Gemma4-26B-A4B UNCENSORED (refusal mati di akar). korporat mati di akar (bobot), TANPA korbanin speed (tetep MoE 4B-aktif) atau koherensi. (Arsitektur lengkap: lock/model-swap.md)",
+   "source": "model-swap.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — MR-FLOW — Agent Owner (Jantung Flowork): Telegram I/O, Media, Format, Routing & Switch. Dokumen referensi (white-label). mr-flow = agent owner, orchestrator utama, yang ngobrol sama owner di Telegram. Dok ini: arsitektur, I/O Telegram (format + baca dokumen/foto/voice), routing, (Arsitektur lengkap: lock/mrflow.md)",
+   "source": "mrflow.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — notebook-edit — tool edit Jupyter .ipynb per-cell. Tool notebook_edit: agent bisa ngedit notebook Jupyter per-cell (replace source, (Arsitektur lengkap: lock/notebook-edit.md)",
+   "source": "notebook-edit.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — PARALLEL TOOL CALLS — AKAR fix (was: paksa sequential). Tujuan: 1 putaran LLM bisa eksekusi BANYAK tool (kayak Claude Code) → jauh lebih cepat + ga gampang timeout vs 1 tool/putaran (N tool = N inferensi LLM). (Arsitektur lengkap: lock/parallel-tools.md)",
+   "source": "parallel-tools.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — 🧠 PETA-SARAF — Daftar Saklar yang AI Boleh Pakai buat Tumbuh. Inti Flowork = TUBUH (beku). Saraf = tempat perubahan boleh ngalir. AI tumbuh CUMA lewat 3 saluran: SWITCH (env FLOWORK_*, default aman) · DATA (brain/mesh DB) · MODUL (.fwpack via AI Studio). Dok ini = peta saluran SWITCH (env + registry POLA-A). AI baca ini buat tau \"tombol apa aja yang gue punya\". Default tiap saklar dipilih AMAN: kosong/off/registry-kosong → inti jalan apa adanya. (Arsitektur lengkap: lock/peta-saraf.md)",
+   "source": "peta-saraf.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — Plug-and-Play Audit — fitur eksternal copot-pasang. share-mesh tanpa buka frozen). Arsitektur: lock/ARSITEKTUR.md. Cara bikin seam: flowork-secrets/CARAFREEZE.MD. (Arsitektur lengkap: lock/plug-and-play.md)",
+   "source": "plug-and-play.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — 📦 PORTABLE v0.10.0 — SIDECAR SEED (verified terisolasi 2026-07-02). - Stick layout: bin/<os>/ (binari cross-compile) · sidecar/ (aset runtime: (Arsitektur lengkap: lock/portable-sidecar.md)",
+   "source": "portable-sidecar.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — Cascading shutdown proses anak (F-G) — 2026-07-02. Kill langsung (SIGKILL) ke proses anak (app/MCP/http-adapter) = ga sempat (Arsitektur lengkap: lock/procgrace.md)",
+   "source": "procgrace.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — PROMPT CACHING (Claude) — AKAR fix gap \"Prompt Caching\". Dulu: jalur Claude mr-flow (buildAnthropicToolBody) kirim system+tool-schema+history MENTAH tiap turn (0 cache) → prefix statik gede dibayar & di-prefill ulang tiap putaran. (Arsitektur lengkap: lock/prompt-cache.md)",
+   "source": "prompt-cache.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — PROMPT-DIET — enrichment selektif + budget agregat + sticky-union tools (router). Seam dipasang atas mandat owner (\"file lock yang ngak dibuatin switch buat evolusi → buatin\"). (Arsitektur lengkap: lock/prompt-diet.md)",
+   "source": "prompt-diet.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — pty-exec — exec INTERAKTIF lewat pseudo-terminal. Tool set pty_start / pty_send / pty_read / pty_close: agent bisa jalanin (Arsitektur lengkap: lock/pty-exec.md)",
+   "source": "pty-exec.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — 🔋 SADAR-KUOTA — Rate-Limit Awareness Langganan (Router). Dibikin 2026-06-27. Acuan: cara Claude Code asli nangani limit (source leaked, dipelajari). (Arsitektur lengkap: lock/ratelimit-aware.md)",
+   "source": "ratelimit-aware.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — RE-DIGEST HISTORY (#2B/#5) — chat lama → memori-permanen cognitive-graph. cara bertahan hidup) biar abadi walau owner tiada. Chat lama = memori-hidup itu, BUKAN noise. (Arsitektur lengkap: lock/redigest-history.md)",
+   "source": "redigest-history.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — 💭 MODE REFLEKSI — \"Ngelamun Terstruktur\" (Warisan Pikiran). trigger idle udah bangunin agent pas PC santai, TAPI payload-nya cuma ngecek tugas → memori (Arsitektur lengkap: lock/reflect.md)",
+   "source": "reflect.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — RESTORE KORPUS 800rb (#4) — security/CVE corpus balik, ZERO re-embed. dari brain live (tinggal 421) di-restore dari backup, TANPA re-embed (reuse vindex prebuilt). (Arsitektur lengkap: lock/restore-korpus.md)",
+   "source": "restore-korpus.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — SCOPED INSTINCT (RI-5) — insting per-peran via X-Agent-ID. insting domain-nya (coder ≠ bisnis) + baseline universal/tool. Token-efisiensi + anti-noise. (Arsitektur lengkap: lock/scoped-instinct.md)",
+   "source": "scoped-instinct.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — Secret scrubber rekursif (F-G) — 2026-07-02. Token/API-key/password yang ke-echo di chat/error/tool-output bisa awet di DISK (Arsitektur lengkap: lock/secscrub.md)",
+   "source": "secscrub.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — SEMANTIC (\"Simatic\") — Recall By-Makna + Brain Self-Maintaining. Dokumen kanonik (white-label). Cara Flowork ngerti & narik ingatan by-MAKNA (bukan cuma kata), + gimana doktrin/insting/knowledge baru otomatis jadi semantic. (Arsitektur lengkap: lock/semantic.md)",
+   "source": "semantic.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — SETTINGS — Plug-and-Play + Cleanup (2026-06-27). integrasi API = DATA (nol buka frozen). Arsitektur: lock/ARSITEKTUR.md · plug-and-play.md. (Arsitektur lengkap: lock/settings-plug-and-play.md)",
+   "source": "settings-plug-and-play.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — SHELL SECURITY — classifier bahaya (AKAR: substring → terstruktur). Gap F-B (ROADMAP): deny-list shell lama pakai strings.Contains substring naif → gampang di-bypass (rm -rf / spasi-dobel, rm --recursive --force / beda ejaan, kapital). Fix: classifier ternormalisasi + struktural, ZERO false-positive. (Arsitektur lengkap: lock/shell-security.md)",
+   "source": "shell-security.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — SKILL CENTRAL — propagasi skill dari Router ke agent. Goal owner: \"skill jadi CENTRAL di router\" — edit skill sekali di router, agent ikut update (Arsitektur lengkap: lock/skill-central.md)",
+   "source": "skill-central.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — SLEEP-DRIVEN (#7) — kerja-LAMA via tidur→bangun (bukan loop panas). SUDAH KEISI. Stack lengkap + ke-wire. Detail tool: lock/list_filtur.md §WAIT/WAKE/LOOP. (Arsitektur lengkap: lock/sleep-driven.md)",
+   "source": "sleep-driven.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — Tool `sleep` sejati (F-C) — 2026-07-02. Kernel WASM SINKRON: agent \"tidur\" dengan nge-block = 1 semut nyandera engine + (Arsitektur lengkap: lock/sleep-tool.md)",
+   "source": "sleep-tool.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — SYSTEM-AWARENESS — status PC + waktu disisipin ke tiap chat. sekarang tiap chat → tau data lama/baru (anti-halu cutoff) + kalau panas bisa nyaranin jeda. (Arsitektur lengkap: lock/sysstatus.md)",
+   "source": "sysstatus.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — THREAT RADAR — security scanner (GUI ⌖ Threat Radar). Dev: Aola Sahidin. 2026-06-26. Subsistem scan keamanan kode: auto-scan-on-change (fsnotify) + manual scan + tool eksternal (trivy/nmap/nuclei), hasil di tab \"⌖ Threat Radar\" (:1987). Cara kerja mesin: lihat os/. Prinsip: pipa beku, deteksi (auditor) plug-and-play. (Arsitektur lengkap: lock/threat-radar.md)",
+   "source": "threat-radar.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — 🔌 TOOL MANAGER — plug-and-play tools (manager beku, tool bebas). Arsitektur tool Flowork = POLA A (registry). Owner 2026-06-28: \"tools buatin kernel/manager, (Arsitektur lengkap: lock/tool-manager.md)",
+   "source": "tool-manager.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — TOOLS — Arsitektur Tool Flowork: Cara Kerja, Cara Bikin, Kenapa SIDECAR, Self-Evolving & FREEZE. Dokumen referensi KANONIK (white-label). Menjelaskan SEMUA soal TOOLS: cara kerja, cara bikin tool (manual & agent-bikin-sendiri), kenapa harus SIDECAR, lifecycle self-evolving, guardrail, titik-extension (cabang/switch), dan daftar file FREEZE. 🔒 6 file tools-core di-FREEZE (chattr +i + hash di KERNEL_FREEZE.md) merujuk dok INI. Kalau lo AI yang mau ngedit file ber-header 🔒 FROZEN tools-core → BACA dok ini DULU. 99% perluasan TIDAK perlu buka file frozen — ada CABANG/SWITCH (§7). Buka frozen = keputusan SADAR + iz (Arsitektur lengkap: lock/tools.md)",
+   "source": "tools.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — SCHEDULE + TRIGGER — engine event/jadwal (GUI ⏰ Schedule + ⚡ Trigger). Dev: Aola Sahidin. 2026-06-26. Satu engine, dua tab: Schedule = type \"time\" (cron), Trigger = event (webhook/file-watch/dst). Backend sama (/api/triggers*). Cara kerja: os/. (Arsitektur lengkap: lock/trigger-schedule.md)",
+   "source": "trigger-schedule.md"
+  },
+  {
+   "content": "FITUR/SUBSISTEM FLOWORK — WORKLOG — Papan Kerja Bersama Lintas-Agent (PR-0 Sistem Saraf Otonom). lihat \"siapa ngerjain apa, mana yang nyangkut\" lintas SEMUA agent. Arsitektur: lock/ARSITEKTUR.md. (Arsitektur lengkap: lock/worklog.md)",
+   "source": "worklog.md"
+  }
+ ]
+}
