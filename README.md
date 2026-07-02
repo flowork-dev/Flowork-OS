@@ -88,6 +88,16 @@ Family nodes connected with layered trust. A grandfather's mind inheritance flow
 
 ---
 
+## Dedication
+
+**Flowork is dedicated to my father, in heaven.**
+
+He always gave me inspiration and counsel. Covid took him. We fought often — yet only now do I truly understand what he meant. From that loss I came to know one thing: **hard-won experience matters far more to pass down than wealth.** I want my children never to lose their way when I, in turn, am gone.
+
+— *Aola Sahidin (Mr.Dev)*
+
+---
+
 <div align="center">
 
 ### Flowork. The Mind Inheritance.

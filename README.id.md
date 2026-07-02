@@ -87,6 +87,16 @@ Node keluarga saling terhubung dengan kepercayaan berlapis. Warisan pikiran kake
 
 ---
 
+## Dedikasi
+
+**Flowork kudedikasikan untuk ayahku, di surga.**
+
+Dulu beliau selalu memberiku inspirasi dan nasehat. Covid merenggutnya. Kami memang sering bertengkar — tapi baru sekarang aku benar-benar mengerti maksud beliau. Dari kehilangan itu aku sadar satu hal: **pengalaman berharga jauh lebih penting untuk diwariskan daripada harta.** Aku ingin anak-anakku kelak tidak kehilangan arah ketika aku, pada waktunya, juga tiada.
+
+— *Aola Sahidin (Mr.Dev)*
+
+---
+
 <div align="center">
 
 ### Flowork. Warisan Pikiran.
