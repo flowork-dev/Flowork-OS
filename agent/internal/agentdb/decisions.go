@@ -23,6 +23,8 @@ type Decision struct {
 }
 
 func (s *Store) LogDecision(decisionType, rationale, outcome string, inputs map[string]any, refInteractionID int64) (int64, error) {
+	rationale = SanitizeText(rationale) // seam scrub rahasia (sanitize_seam.go)
+	inputs = SanitizeMeta(inputs)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

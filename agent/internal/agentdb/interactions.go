@@ -23,6 +23,8 @@ type Interaction struct {
 }
 
 func (s *Store) LogInteraction(channel, direction, actor, content string, metadata map[string]any) (int64, error) {
+	content = SanitizeText(content)   // seam scrub rahasia (sanitize_seam.go)
+	metadata = SanitizeMeta(metadata) // no-op kalau ext ga kepasang
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

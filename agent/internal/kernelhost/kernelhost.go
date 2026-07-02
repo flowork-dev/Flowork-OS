@@ -1045,10 +1045,21 @@ func (h *Host) RPCHandler(w http.ResponseWriter, r *http.Request) {
 // Open-per-call: cheap untuk single-writer SQLite + insert kecil. Cache
 // Store per pluginID belum di-implement (premature opt — Mr.Flow chat
 // throughput sekarang low). Lihat audit deferred items di Changelog.
+// SanitizeLogged / SanitizeLoggedMap — SEAM (Pola B, 2026-07-02): scrub rahasia
+// (API key/token/password) dari konten SEBELUM dipersist ke sink DB agent
+// (interactions/decisions/mistakes). Default: apa adanya (no-op). Diisi dari file
+// NON-FROZEN (agent/secscrub_ext.go → internal/secscrub) — jangan edit file ini.
+var (
+	SanitizeLogged    = func(s string) string { return s }
+	SanitizeLoggedMap = func(m map[string]any) map[string]any { return m }
+)
+
 func (h *Host) logInteraction(pluginID, channel, direction, actor, content string, metadata map[string]any) error {
 	if pluginID == "" {
 		return fmt.Errorf("pluginID required")
 	}
+	content = SanitizeLogged(content)
+	metadata = SanitizeLoggedMap(metadata)
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -1106,7 +1117,8 @@ func (h *Host) logDecision(pluginID, decisionType, rationale, outcome string, in
 	if err != nil {
 		return 0, err
 	}
-	return store.LogDecision(decisionType, rationale, outcome, inputs, refInteractionID)
+	return store.LogDecision(decisionType, SanitizeLogged(rationale), outcome,
+		SanitizeLoggedMap(inputs), refInteractionID)
 }
 
 // karmaUpdate — implementasi `runtime.KarmaUpdater`. Resolve pluginID →
@@ -1174,7 +1186,7 @@ func (h *Host) recordMistake(agentID, category, title, content string) {
 	if err != nil {
 		return
 	}
-	_, _, _ = store.AddMistake(category, title, content, "invoke-choke-point")
+	_, _, _ = store.AddMistake(category, SanitizeLogged(title), SanitizeLogged(content), "invoke-choke-point")
 }
 
 // recordInvokeSelfKnowledge — SELF-AWARENESS (fuel R7), owner-approved 2026-06-15.

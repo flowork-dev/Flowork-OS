@@ -24,6 +24,8 @@ type Mistake struct {
 }
 
 func (s *Store) AddMistake(category, title, content, contextOrigin string) (int64, bool, error) {
+	title = SanitizeText(title) // seam scrub rahasia (sanitize_seam.go)
+	content = SanitizeText(content)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
