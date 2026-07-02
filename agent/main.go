@@ -212,7 +212,9 @@ func main() {
 	if n := connections.MigrateSchemaSecretsToGlobal(); n > 0 {
 		log.Printf("connections: centralized %d connector secret(s) into Settings → API Keys", n)
 	}
-	kernelhost.EnvForwardKeys = connections.GlobalSecretEnvKeys
+	// Papan colokan multi-sumber (envfwd_seam.go) — connections dicolok via init()
+	// di seam; sumber lain (switch GUI guest-side dll) nyolok lewat sibling _ext.go.
+	kernelhost.EnvForwardKeys = mergedEnvForwardKeys
 
 	// Backfill each agent's GUI-editable prompt (kv.prompt) from its prompt.md when
 	// unset, so the persona shows up + is editable in the GUI and reaches the wasm

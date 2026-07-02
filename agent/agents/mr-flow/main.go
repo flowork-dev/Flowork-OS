@@ -175,6 +175,42 @@ const (
 
 var outBuf [respBufBytes]byte
 
+// ── Timeout call LLM (SEAM Pola B — 📄 Dok: FLowork_os/lock/llm-timeout.md) ──
+// AKAR fix 2026-07-02: dulu hardcode 90_000ms → model LOKAL yang mikir tugas
+// berat (>90s/completion) SELALU "context deadline exceeded". Default 240s =
+// samain agentkit; rantai atas cukup: router→upstream 300s
+// (FLOWORK_ROUTER_HTTP_TIMEOUT) · host netFetch cap 300s · jendela turn
+// 290-300s. Override via switch GUI FLOWORK_LLM_TIMEOUT_MS (min 15000).
+// ADAPTIF: dipotong ke sisa jendela turn (anti nembus turn-timeout 290s =
+// turn ke-kill TANPA jawaban; mending balik error bersih → chain
+// auto-continue tetep nyambung).
+var llmFetchTimeoutMs = func(loopStartMs uint64) int {
+	t := 240_000
+	if v := atoiSafe(strings.TrimSpace(os.Getenv("FLOWORK_LLM_TIMEOUT_MS"))); v >= 15_000 {
+		t = v
+	}
+	rem := 290_000 - int(hostTimeNowMs()-loopStartMs) - 20_000
+	if rem < 15_000 {
+		rem = 15_000
+	}
+	if t > rem {
+		t = rem
+	}
+	return t
+}
+
+// llmRetryable (SEAM): timeout client BUKAN transient — JANGAN re-POST
+// (engine lokal masih ngunyah request lama; re-POST = antri dobel di 1 GPU =
+// makin macet, plus sisa jendela turn ga cukup buat attempt segede itu).
+// Selain itu tetep retry: net error lain + 5xx/429/408.
+var llmRetryable = func(err error, resp *httpResp) bool {
+	if err != nil {
+		s := err.Error()
+		return !strings.Contains(s, "deadline exceeded") && !strings.Contains(s, "Client.Timeout")
+	}
+	return resp != nil && (resp.Status >= 500 || resp.Status == 429 || resp.Status == 408)
+}
+
 // selfID — id agent ini, di-inject host via FLOWORK_AGENT_ID (= manifest.ID).
 // Fallback "mr-flow" buat dev/standalone. KUNCI Fase 2 (template copas): agent
 // hasil spawn otomatis pake id-nya sendiri di URL self-API (interactions/
@@ -860,16 +896,17 @@ func callLLM(cfg agentConfig, userText string, history []chatTurn, notifyChatID 
 		// anthropic 529 overload) sering lolos pas dicoba lagi. 4xx ngga di-retry
 		// (itu salah request kita). Max 3 attempt.
 		resp, err := fetch("POST", cfg.Router.URL,
-			map[string]string{"Content-Type": "application/json"}, body, 90_000)
+			map[string]string{"Content-Type": "application/json"}, body, llmFetchTimeoutMs(loopStartMs))
 		// ITEM 4 resilience: retry transient (5xx/429/408/net) exp-backoff+jitter (was: 3× TANPA backoff
-		// = hammer router). Fatal 4xx lain ga di-retry. Prinsip Claude withRetry.ts. Switch FLOWORK_ROUTER_RETRY.
+		// = hammer router). Fatal 4xx + TIMEOUT client ga di-retry (llmRetryable — model lokal masih
+		// ngunyah, re-POST = dobel beban). Prinsip Claude withRetry.ts. Switch FLOWORK_ROUTER_RETRY.
 		maxRtry := 5
 		if v := strings.TrimSpace(os.Getenv("FLOWORK_ROUTER_RETRY")); v != "" {
 			if n := atoiSafe(v); n >= 1 {
 				maxRtry = n
 			}
 		}
-		for attempt := 1; attempt < maxRtry && (err != nil || (resp != nil && (resp.Status >= 500 || resp.Status == 429 || resp.Status == 408))); attempt++ {
+		for attempt := 1; attempt < maxRtry && llmRetryable(err, resp); attempt++ {
 			d := 500 << uint(attempt-1)
 			if d > 30000 {
 				d = 30000
@@ -877,7 +914,7 @@ func callLLM(cfg agentConfig, userText string, history []chatTurn, notifyChatID 
 			time.Sleep(time.Duration(d+int(hostTimeNowMs()%uint64(d/4+1))) * time.Millisecond)
 			fmt.Fprintf(os.Stderr, "["+selfID()+"] router transient (attempt %d, backoff %dms), retry…\n", attempt, d)
 			resp, err = fetch("POST", cfg.Router.URL,
-				map[string]string{"Content-Type": "application/json"}, body, 90_000)
+				map[string]string{"Content-Type": "application/json"}, body, llmFetchTimeoutMs(loopStartMs))
 		}
 		if err != nil {
 			return "router error: " + err.Error()
