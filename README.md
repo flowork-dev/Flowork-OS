@@ -1,110 +1,86 @@
 <div align="center">
 
-**English** · [🇮🇩 Bahasa Indonesia](README.id.md)
+# Flowork OS ⚡
 
-# Flowork — The Mind Inheritance
+**The self-evolving, sovereign AI operating system. It's the only AI home that writes its own tools, runs fully on your own hardware, and keeps growing — even after you're gone.**
 
-*For those who built from nothing to the summit — and know that money, in the end, is only a number.*
+[![Docs](https://img.shields.io/badge/docs-flowork-blue)](https://github.com/flowork-dev/Flowork-OS)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-green.svg)](LICENSE)
+[![Multi-OS](https://img.shields.io/badge/runs%20on-Linux%20·%20macOS%20·%20Windows%20·%20USB-8A2BE2)](#quick-install)
+[![Local-first](https://img.shields.io/badge/100%25-local%20·%20white--label-black)]()
 
-</div>
-
----
-
-Imagine, for a moment.
-
-You are gone. Years after your passing, your children face the greatest problem of their lives — a decision that will determine everything. And in that moment, what they need most is **you:** your counsel, your perspective, the way you once conquered the very same storm.
-
-But you are not there.
-
-They lose their way. Drowning in regret — *"if only father were still here..."*
-
-**What if they could still ask you?**
-
----
-
-For those who built from nothing to the summit, there is one truth: **money is only a number.** What is truly precious is **the journey** — the experience, the wounds that taught you, the way of thinking you paid for dearly with your own falls. Yet until now, that journey died with the body. Everything you learned across a lifetime — gone in a single final breath.
-
----
-
-> ## "Wealth never lasts three generations."
-> The grandchild inherits the **money**, but not the **mind** —
-> so within three generations, the fortune runs dry as well.
-
-The great are not afraid of losing their wealth. What they fear runs deeper: that their descendants will inherit the fortune, but not the wisdom that created it. They have secured everything — wealth through advisors, assets through lawyers, their name through foundations. Everything, except the one thing that made it all possible: **their own mind.**
-
----
-
-## This is Flowork.
-
-Flowork is where you **immortalize your mind** — your knowledge, your experience, and the way you solved problems across a lifetime — into **an AI that you truly own.**
-
-That AI learns the way you think. It keeps the solutions you once discovered. And when you are gone, it remains — **becoming a counselor for your children.** They can ask, and the AI answers with your perspective, drawn from the journeys you once walked — so they learn from your path, and never face the storm alone.
-
-This is not renting another company's intelligence. This is **your own AI:**
-
-- **Fully owned.** It lives on your own infrastructure, not on someone else's servers.
-- **Everlasting.** Built to keep living and counseling — even after you are gone.
-- **Inherited.** Passed down like an heirloom, from one generation to the next.
-
----
-
-## What money has never been able to buy.
-
-Money can buy anything — houses, land, a name, even the time of others. The one thing it has never been able to buy: **passing the contents of your mind to your descendants.**
-
-Until today.
-
----
-
-## Behind the inheritance — the technology
-
-Flowork is not merely poetry. Behind it is a real engine, running on your own machine:
-
-**🧠 Brain — a memory that never forgets.**
-Every piece of knowledge, every decision, every document you pour in is stored permanently and can be recalled at any time — never lost, never faded.
-
-**⚡ Instinct — the patterns you formed from experience.**
-Flowork learns *how* you think: the instinct that tells you a decision feels right or wrong, honed over years.
-
-**🕸️ DreamGraph — memory in four dimensions.**
-The heart of it all. DreamGraph weaves your memory into a single, whole understanding across four dimensions:
-
-1. **Knowledge** — what you know.
-2. **Instinct** — how you sense a decision.
-3. **Lessons** — the wisdom from every mistake and every fall; what must never be repeated.
-4. **Connections across time** — how it all interlinks and matures, consolidated in "dream cycles," like the brain during sleep.
-
-**🔒 Local AI — entirely yours.**
-It runs on your own machine. Private, offline, with no other company's servers. The contents of your mind never leave your home.
-
-**🌐 Mesh — one lineage, across generations.**
-Family nodes connected with layered trust. A grandfather's mind inheritance flows to the father, to the grandchild — one bloodline, one mind that keeps on living.
-
-<div align="center">
-
-<img src="hero.png" alt="Flowork — your mind preserved and passed down across generations" width="900">
+[🇮🇩 Bahasa Indonesia](README.id.md)
 
 </div>
 
 ---
 
-## Dedication
+Flowork is a **local-first AI operating system** built around one idea: an AI that **improves itself**. It creates its own tools when it hits a gap, freezes what's stable so it never breaks, adopts new model/tunnel/voice providers as plug-ins you can pull out anytime, and carries a persistent brain that grows with every task. No cloud lock-in. No vendor you can't unplug. It runs on a `$5` box, a laptop, or a bootable USB stick — and it's yours.
 
-**Flowork is dedicated to my father, in heaven.**
+> **Heads up:** Flowork ships with **empty credential slots**. Bring your own keys (or log in via OAuth) from the GUI — nothing is baked in. `GUI is the only source of truth.`
 
-He always gave me inspiration and counsel. Covid took him. We fought often — yet only now do I truly understand what he meant. From that loss I came to know one thing: **hard-won experience matters far more to pass down than wealth.** I want my children never to lose their way when I, in turn, am gone.
+## Quick Install
 
-— *Aola Sahidin (Mr.Dev)*
+**Linux / macOS / WSL2**
+```bash
+git clone https://github.com/flowork-dev/Flowork-OS && cd Flowork-OS
+./start.sh          # builds, then serves the GUI on http://127.0.0.1:1987
+```
 
----
+**Portable (no install — USB / any machine)**
+Grab `flowork-portable-<version>.zip` from [Releases](https://github.com/flowork-dev/Flowork-OS/releases), unzip, and run `start-flowork.sh` (or `Start-Flowork.command` on macOS, `Start-Flowork.bat` on Windows). A sanitized starter-brain is already inside — it works out of the box.
 
-<div align="center">
+**Bootable appliance (VM / dedicated USB)**
+Flash `flowork-os-<version>.iso` (or `.usb.img.gz`) to a stick and boot. A whole AI OS, no host install.
 
-### Flowork. The Mind Inheritance.
-*Immortalize your mind. Pass down your experience.*
-*Stand beside your children — even when you are gone.*
+## Getting Started
 
-Real software you can run today — not merely a concept.
-**[⬇️ Download Flowork](https://github.com/flowork-os/Flowork-OS/releases)**
+| Command | What it does |
+|---|---|
+| `./start.sh` | Build + launch the full stack (router + agent + local model) |
+| open `http://127.0.0.1:1987` | The GUI — the single source of truth for every setting |
+| open `http://127.0.0.1:2402` | Router console — providers, models, usage, mesh, console log |
+| chat **mr-flow** | Your flagship agent — talk to it in plain language, from the GUI or Telegram |
+| `./stop.sh` | Stop everything cleanly |
 
-</div>
+## Why Flowork
+
+- **A real self-evolution loop.** When mr-flow lacks a tool, it writes one, tests it, and promotes it — no human in the loop. Stable code gets **frozen** (hash + immutability) so future changes can never silently break the core.
+- **Plug-and-play, vendor-proof.** Models, tunnels, TTS/STT, image, embedding, web-fetch — every third party is a registry plug-in. If a company disappears, you pull the file out and the core still builds. `Register / Get / List`, nothing hardcoded.
+- **Sovereign & local.** Runs your own local model by default; any LLM provider (Claude, Antigravity/Gemini, OpenAI-compatible, Ollama) slots in. Your data, your brain, your machine.
+- **An agent colony.** mr-flow orchestrates a team — scanners, coders, researchers, self-evolution judges — each isolated, each with its own memory.
+- **White-label, multi-OS, no hardcoded paths.** Zero company branding in the code; rebrand freely. Linux, macOS, Windows, or a flash drive.
+
+## CLI vs Messaging — quick reference
+
+| | GUI (`:1987`) | Telegram | CLI tools |
+|---|---|---|---|
+| Chat mr-flow | ✅ | ✅ | ✅ |
+| Configure everything | ✅ (source of truth) | — | — |
+| Alerts / notifications | ✅ | ✅ | — |
+| Run agents / triggers / schedules | ✅ | ✅ | ✅ |
+
+## Documentation
+
+| Topic | Where |
+|---|---|
+| Architecture & subsystems | [`docs/`](docs/) |
+| Providers & models | Router console → Providers / Models |
+| Brain & memory | Router console → Brain |
+| Agents & self-evolution | GUI → Agents / AI Studio / Self-Evolution |
+| Security (Threat Radar, MITM, scanner) | GUI → Threat Radar · Router → MITM |
+| Auto-update & release | `docs/AUTO-UPDATE.md` |
+
+## Contributing
+
+Flowork grows by **plug-ins, not by breaking the core.** Add a feature through a sibling extension / registry seam — never edit a frozen file. See the architecture docs before opening a PR.
+
+## Community
+
+Issues and PRs welcome. This is open infrastructure for a sovereign, self-improving AI — build on it, fork it, make it yours.
+
+## License
+
+[AGPL-3.0](LICENSE) — built to stay free and to keep every derivative free.
+
+<!-- Topics: ai, ai-agent, ai-agents, llm, claude, anthropic, openai, chatgpt, codex, claude-code, ollama, gemini, self-improving-ai, self-evolving, sovereign-ai, local-ai, ai-os, white-label, plug-and-play, multi-agent, flowork -->
